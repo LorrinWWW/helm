@@ -1,7 +1,14 @@
-from helm.proxy.models import get_model, get_model_names_with_tag, Model, WIDER_CONTEXT_WINDOW_TAG
+from helm.proxy.models import (
+    get_model,
+    get_model_names_with_tag,
+    Model,
+    AI21_WIDER_CONTEXT_WINDOW_TAG,
+    WIDER_CONTEXT_WINDOW_TAG,
+)
 from .ai21_window_service import AI21WindowService
+from .wider_ai21_window_service import WiderAI21WindowService
 from .anthropic_window_service import AnthropicWindowService
-from .cohere_window_service import CohereWindowService
+from .cohere_window_service import CohereWindowService, CohereCommandWindowService
 from .luminous_window_service import (
     LuminousBaseWindowService,
     LuminousExtendedWindowService,
@@ -12,6 +19,7 @@ from .openai_window_service import OpenAIWindowService
 from .wider_openai_window_service import WiderOpenAIWindowService
 from .mt_nlg_window_service import MTNLGWindowService
 from .bloom_window_service import BloomWindowService
+from .huggingface_window_service import HuggingFaceWindowService
 from .ice_window_service import ICEWindowService
 from .santacoder_window_service import SantaCoderWindowService
 from .gpt2_window_service import GPT2WindowService
@@ -20,10 +28,12 @@ from .gptneox_window_service import GPTNeoXWindowService
 from .opt_window_service import OPTWindowService
 from .t0pp_window_service import T0ppWindowService
 from .t511b_window_service import T511bWindowService
+from .flan_t5_window_service import FlanT5WindowService
 from .ul2_window_service import UL2WindowService
 from .yalm_window_service import YaLMWindowService
 from .window_service import WindowService
 from .tokenizer_service import TokenizerService
+from helm.proxy.clients.huggingface_client import get_huggingface_model_config
 
 
 class WindowServiceFactory:
@@ -38,7 +48,10 @@ class WindowServiceFactory:
         engine: str = model.engine
 
         window_service: WindowService
-        if model_name in get_model_names_with_tag(WIDER_CONTEXT_WINDOW_TAG):
+        huggingface_model_config = get_huggingface_model_config(model_name)
+        if huggingface_model_config:
+            window_service = HuggingFaceWindowService(service=service, model_config=huggingface_model_config)
+        elif model_name in get_model_names_with_tag(WIDER_CONTEXT_WINDOW_TAG):
             window_service = WiderOpenAIWindowService(service)
         # For the Google models, we approximate with the OpenAIWindowService
         elif organization == "openai" or organization == "simple" or organization == "google":
@@ -80,14 +93,22 @@ class WindowServiceFactory:
             window_service = T0ppWindowService(service)
         elif model_name == "together/t5-11b":
             window_service = T511bWindowService(service)
+        elif model_name == "together/flan-t5-xxl":
+            window_service = FlanT5WindowService(service)
         elif model_name == "together/ul2":
             window_service = UL2WindowService(service)
         elif model_name == "together/yalm":
             window_service = YaLMWindowService(service)
         elif organization == "cohere":
-            window_service = CohereWindowService(service)
+            if "command" in engine:
+                window_service = CohereCommandWindowService(service)
+            else:
+                window_service = CohereWindowService(service)
         elif organization == "ai21":
-            window_service = AI21WindowService(service=service, gpt2_window_service=GPT2WindowService(service))
+            if model_name in get_model_names_with_tag(AI21_WIDER_CONTEXT_WINDOW_TAG):
+                window_service = WiderAI21WindowService(service=service, gpt2_window_service=GPT2WindowService(service))
+            else:
+                window_service = AI21WindowService(service=service, gpt2_window_service=GPT2WindowService(service))
         else:
             raise ValueError(f"Unhandled model name: {model_name}")
 

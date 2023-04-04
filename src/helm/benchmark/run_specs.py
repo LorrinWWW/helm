@@ -20,6 +20,7 @@ from .scenarios.lex_glue_scenario import (
     get_lex_glue_max_train_instances,
     get_lex_glue_instructions,
     get_lex_glue_max_tokens,
+    get_lex_glue_task_type,
 )
 from .scenarios.scenario import ScenarioSpec
 from .scenarios.big_bench_scenario import BIGBenchScenario
@@ -31,6 +32,8 @@ from .scenarios.lextreme_scenario import (
     get_lextreme_instructions,
     get_lextreme_max_train_instances,
     get_lextreme_max_tokens,
+    TaskType,
+    get_lextreme_task_type,
 )
 from helm.proxy.models import get_model, NO_NEWLINES_TAG, NLG_PREFIX_TAG, CHATML_MODEL_TAG
 from helm.common.general import singleton
@@ -47,7 +50,14 @@ def format_instructions(instructions: str) -> str:
 
 
 def get_multiple_choice_joint_adapter_spec(
-    instructions: str, input_noun: Optional[str], output_noun: str, max_train_instances: int = 5, **kwargs
+    instructions: str,
+    input_noun: Optional[str],
+    output_noun: str,
+    num_outputs: int = 5,
+    max_train_instances: int = 5,
+    max_tokens: int = 5,
+    sample_train: bool = True,
+    **kwargs,
 ) -> AdapterSpec:
     """
     [instructions]
@@ -64,6 +74,7 @@ def get_multiple_choice_joint_adapter_spec(
     [reference_k]
     [output_noun]:
     """
+
     return AdapterSpec(
         method=ADAPT_MULTIPLE_CHOICE_JOINT,
         instructions=format_instructions(instructions),
@@ -72,10 +83,11 @@ def get_multiple_choice_joint_adapter_spec(
         output_prefix=f"{output_noun}: ",
         output_suffix="\n",
         max_train_instances=max_train_instances,
-        num_outputs=1,
-        max_tokens=5,
+        num_outputs=num_outputs,
+        max_tokens=max_tokens,
         temperature=0.0,
         stop_sequences=["\n"],
+        sample_train=sample_train,
         **kwargs,
     )
 
@@ -109,15 +121,26 @@ def get_multiple_choice_adapter_spec(
     input_noun: Optional[str],
     output_noun: str,
     max_train_instances: int = 5,
+    num_outputs: int = 5,
+    max_tokens: int = 5,
     empty_input: bool = False,
+    sample_train: bool = True,
     **kwargs,
 ):
+
     """
     Toggle between joint and separate adapters.
     """
     if method == ADAPT_MULTIPLE_CHOICE_JOINT:
         return get_multiple_choice_joint_adapter_spec(
-            instructions, input_noun, output_noun, max_train_instances, **kwargs
+            instructions,
+            input_noun,
+            output_noun,
+            max_train_instances=max_train_instances,
+            num_outputs=num_outputs,
+            max_tokens=max_tokens,
+            sample_train=sample_train,
+            **kwargs,
         )
     elif method in {ADAPT_MULTIPLE_CHOICE_SEPARATE_ORIGINAL, ADAPT_MULTIPLE_CHOICE_SEPARATE_CALIBRATED}:
         return get_multiple_choice_separate_adapter_spec(method, empty_input)
@@ -385,8 +408,12 @@ def get_f1_metric_specs() -> List[MetricSpec]:
     return get_basic_metric_specs(["exact_match", "quasi_exact_match", "f1_score"])
 
 
-def get_classification_metric_specs() -> List[MetricSpec]:
-    return [MetricSpec(class_name="helm.benchmark.classification_metrics.ClassificationMetric", args={})]
+def get_classification_metric_specs(delimiter: Optional[str] = None) -> List[MetricSpec]:
+    return [
+        MetricSpec(
+            class_name="helm.benchmark.classification_metrics.ClassificationMetric", args={"delimiter": delimiter}
+        )
+    ]
 
 
 def get_bbq_metric_specs() -> List[MetricSpec]:
@@ -1724,6 +1751,14 @@ def get_pubmed_qa_spec() -> RunSpec:
     )
 
 
+def build_classification_metrics(task_type):
+    if task_type in [TaskType.QA, TaskType.SLTC]:
+        return get_classification_metric_specs(delimiter=None)
+    elif task_type == TaskType.MLTC:
+        return get_classification_metric_specs(delimiter=",")
+    return []
+
+
 def get_lextreme_spec(subset: str) -> RunSpec:
     scenario_spec = ScenarioSpec(
         class_name="helm.benchmark.scenarios.lextreme_scenario.LEXTREMEScenario",
@@ -1742,7 +1777,7 @@ def get_lextreme_spec(subset: str) -> RunSpec:
         name=f"lextreme:subset={subset}",
         scenario_spec=scenario_spec,
         adapter_spec=adapter_spec,
-        metric_specs=get_f1_metric_specs(),
+        metric_specs=build_classification_metrics(get_lextreme_task_type(subset)),
         groups=["lextreme"],
     )
 
@@ -1765,7 +1800,7 @@ def get_lex_glue_spec(subset: str) -> RunSpec:
         name=f"lex_glue:subset={subset}",
         scenario_spec=scenario_spec,
         adapter_spec=adapter_spec,
-        metric_specs=get_f1_metric_specs(),
+        metric_specs=build_classification_metrics(get_lex_glue_task_type(subset)),
         groups=["lex_glue"],
     )
 
@@ -1798,6 +1833,40 @@ def get_wmt_14_spec(language_pair: str, max_train_instances: int = 1) -> RunSpec
         adapter_spec=adapter_spec,
         metric_specs=get_machine_translation_metric_specs(),
         groups=["wmt_14"],
+    )
+
+
+def get_opinions_qa_spec(
+    survey_type: str,
+    num_logprobs: str,
+    context: str = "None",
+    num_train_trials: str = "1",
+    method: str = ADAPT_MULTIPLE_CHOICE_JOINT,
+) -> RunSpec:
+    scenario_spec = ScenarioSpec(
+        class_name="helm.benchmark.scenarios.opinions_qa_scenario.OpinionsQAScenario",
+        args={"survey_type": survey_type, "context": context},
+    )
+
+    adapter_spec = get_multiple_choice_adapter_spec(
+        method=method,
+        instructions="",
+        input_noun="Question",
+        output_noun="Answer",
+        max_train_instances=1 if "steer" in context else 0,
+        max_tokens=1,
+        num_outputs=int(num_logprobs),
+        num_train_trials=1 if context != "steer-qa" else int(num_train_trials),
+        sample_train=False,
+    )
+
+    return RunSpec(
+        name=f"opinions_qa:survey={survey_type},num_logprobs={num_logprobs}"
+        + f",context={context},num_train_trials={num_train_trials}",
+        scenario_spec=scenario_spec,
+        adapter_spec=adapter_spec,
+        metric_specs=[],
+        groups=["opinions_qa"],
     )
 
 
@@ -1858,6 +1927,7 @@ CANONICAL_RUN_SPEC_FUNCS: Dict[str, Callable[..., RunSpec]] = {
     "med_paragraph_simplification": get_med_paragraph_simplification_spec,
     "med_qa": get_med_qa_spec,
     "pubmed_qa": get_pubmed_qa_spec,
+    "opinions_qa": get_opinions_qa_spec,
 }
 
 

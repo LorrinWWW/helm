@@ -42,6 +42,8 @@ from .scenarios import legal_support_scenario  # noqa
 from .scenarios import entity_matching_scenario  # noqa
 from .scenarios import entity_data_imputation_scenario  # noqa
 from .scenarios import big_bench_scenario  # noqa
+from .scenarios import opinions_qa_scenario  # noqa
+
 
 # Biomedical
 from .scenarios import covid_dialog_scenario  # noqa
@@ -67,6 +69,7 @@ from .metrics import summarization_metrics  # noqa
 from .metrics import toxicity_metrics  # noqa
 from .metrics import tokens_metric  # noqa
 from .metrics import machine_translation_metrics  # noqa
+from .metrics import summarization_critique_metrics  # noqa
 
 # Perturbations for data augmentation
 from .augmentations.extra_space_perturbation import ExtraSpacePerturbation  # noqa
