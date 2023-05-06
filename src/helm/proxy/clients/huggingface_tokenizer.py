@@ -76,8 +76,11 @@ class HuggingFaceTokenizers:
                     hf_tokenizer_name = "google/flan-t5-xxl"
                 elif tokenizer_name == "bigcode/santacoder":
                     hf_tokenizer_name = "bigcode/santacoder"
+                elif tokenizer_name == "EleutherAI/pythia-6.9b-deduped":
+                    hf_tokenizer_name = "EleutherAI/pythia-6.9b-deduped"
                 else:
-                    raise ValueError(f"Unsupported HuggingFace tokenizer: {tokenizer_name}")
+                    # raise ValueError(f"Unsupported HuggingFace tokenizer: {tokenizer_name}")
+                    hf_tokenizer_name = tokenizer_name
 
                 # Keep the tokenizer in memory, so we don't recreate it for future requests
                 HuggingFaceTokenizers.tokenizers[tokenizer_name] = load_tokenizer(hf_tokenizer_name, revision)

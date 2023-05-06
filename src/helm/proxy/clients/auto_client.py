@@ -169,6 +169,7 @@ class AutoClient(Client):
                 "huggingface",
                 "microsoft",
                 "openai",
+                "huggyllama", # tmp
             ]:
                 client = HuggingFaceClient(cache_config=cache_config)
             elif organization == "AlephAlpha":

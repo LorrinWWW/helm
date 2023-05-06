@@ -25,6 +25,9 @@ from .santacoder_window_service import SantaCoderWindowService
 from .gpt2_window_service import GPT2WindowService
 from .gptj_window_service import GPTJWindowService
 from .gptneox_window_service import GPTNeoXWindowService
+from .gpt_neo_window_service import GPTNeoWindowService
+from .pythia_window_service import PythiaWindowService
+from .llama_window_service import LlamaWindowService
 from .opt_window_service import OPTWindowService
 from .t0pp_window_service import T0ppWindowService
 from .t511b_window_service import T511bWindowService
@@ -75,19 +78,25 @@ class WindowServiceFactory:
             window_service = SantaCoderWindowService(service)
         elif model_name == "huggingface/gpt2":
             window_service = GPT2WindowService(service)
-        elif model_name == "together/bloom":
+        elif model_name == "together/bloom" or "bloom" in model_name:
             window_service = BloomWindowService(service)
         elif model_name == "together/glm":
             # From https://github.com/THUDM/GLM-130B, "the tokenizer is implemented based on
             # icetk---a unified multimodal tokenizer for images, Chinese, and English."
             window_service = ICEWindowService(service)
-        elif model_name in ["huggingface/gpt-j-6b", "together/gpt-j-6b", "gooseai/gpt-j-6b"]:
+        elif model_name in ["huggingface/gpt-j-6b", "together/gpt-j-6b", "gooseai/gpt-j-6b", "together/gpt-jt-6b-v1", "together/gpt-jt-x-6b-v1.1"] or 'GPT-J' in model_name:
             window_service = GPTJWindowService(service)
-        elif model_name in ["together/gpt-neox-20b", "gooseai/gpt-neo-20b", "together/gpt-neoxt-chat-base-20b"]:
+        elif model_name in ["together/gpt-neox-20b", "gooseai/gpt-neo-20b", "together/gpt-neoxt-chat-base-20b"] or 'mpt-7b' in model_name:
             window_service = GPTNeoXWindowService(service)
-        elif model_name == "together/h3-2.7b":
+        elif 'red-pajama' in model_name or 'rp-i' in model_name or 'stablelm' in model_name or 'pythia' in model_name:
+            window_service = PythiaWindowService(service)
+        elif 'gpt-neo' in model_name:
+            window_service = GPTNeoWindowService(service)
+        elif 'llama' in model_name:
+            window_service = LlamaWindowService(service)
+        elif model_name == "together/h3-2.7b" or "together/hb-" in model_name:
             window_service = GPT2WindowService(service)
-        elif model_name in ["together/opt-66b", "together/opt-175b"]:
+        elif model_name in ["together/opt-66b", "together/opt-175b"] or "together/opt-" in model_name:
             window_service = OPTWindowService(service)
         elif model_name == "together/t0pp":
             window_service = T0ppWindowService(service)

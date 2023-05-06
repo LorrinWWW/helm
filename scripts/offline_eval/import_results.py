@@ -12,7 +12,8 @@ from helm.common.cache import (
     request_to_key,
 )
 from helm.common.hierarchical_logger import hlog, htrack
-from .export_requests import SUPPORTED_ORGS
+# from .export_requests import SUPPORTED_ORGS
+SUPPORTED_ORGS = ["together", "google", "microsoft"]
 
 
 """
