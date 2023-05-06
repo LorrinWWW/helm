@@ -15,7 +15,14 @@ from .client import Client, wrap_request_time, truncate_sequence
 MODEL_ALIASES = {
     "flan-t5-xxl": "flan-t5-xxl-hf",
     "h3-2.7b": "h3-2.7b-h3",
+    "gpt-jt-x-6b-v1.1": "Together-gpt-JT-6B-v1.1-X",
+    "stablelm-base-alpha-7b-fix2": "stablelm-base-alpha-7b",
+    "red-pajama-600B-tokens-fix": "red-pajama-600B-tokens",
+    "oasst-sft-7-llama-30b-fix": "oasst-sft-7-llama-30b",
+    "bloom-ock-dolly-oasst1-hf": "bloom-ock-dolly-oasst1",
+    "hb-150m-fix": "hb-150m",
 }
+# MODEL_ALIASES = {"h3-2.7b": "h3-2.7b-h3", "gpt-neoxt-chat-base-20b": "gpt-neoxt-chat-20b-v0.15-chatml"}
 """Together model name aliases.
 
 HELM users use a shorter model name (e.g. together/flan-t5-xxl)
@@ -40,14 +47,15 @@ class TogetherClient(Client):
     checks if the request/result is cached. We return the result if it's in the cache. Otherwise, we return an error.
     """
 
-    INFERENCE_ENDPOINT: str = "https://staging.together.xyz/api/inference"
+    INFERENCE_ENDPOINT: str = "https://staging.together.xyz/inference"
 
     @staticmethod
     def convert_to_raw_request(request: Request) -> Dict:
         # Following the examples from https://github.com/togethercomputer/open-models-api
-        return {
+        req = {
             "request_type": "language-model-inference",
-            "model": MODEL_ALIASES.get(request.model_engine, request.model_engine),
+            # "model": MODEL_ALIASES.get(request.model_engine, request.model_engine),
+            "model": request.model_engine,
             "prompt": request.prompt,
             "temperature": request.temperature,
             "n": request.num_completions,
@@ -57,23 +65,55 @@ class TogetherClient(Client):
             "stop": request.stop_sequences or None,
             "echo": request.echo_prompt,
             "top_p": request.top_p,
+            "stream_tokens": False,
         }
+        
+        if 'bloom' in request.model_engine or 'mpt' in request.model_engine:
+            req['logprobs'] = 0
+        
+        return req
 
     def __init__(self, cache_config: CacheConfig, api_key: Optional[str] = None):
         # TODO: the endpoint currently doesn't require an API key. When an API key is not specified
         #       in credentials.conf, we rely on offline evaluation only.
-        self.api_key: Optional[str] = api_key
+        self.api_key: Optional[
+            str
+        ] = "Bearer 568af9d9b24c8910c6b30b07f1d10a9c01c775252580befd3d882c5a85d889b4"  # api_key
         self.cache = Cache(cache_config)
 
     def make_request(self, request: Request) -> RequestResult:
         raw_request = TogetherClient.convert_to_raw_request(request)
         cache_key: Dict = Client.make_cache_key(raw_request, request)
+        
+        # raw_request['model'] = MODEL_ALIASES.get(request.model_engine, request.model_engine)
 
         try:
 
             def do_it():
-                result = requests.post(TogetherClient.INFERENCE_ENDPOINT, json=raw_request).json()
+                raw_request['model'] = MODEL_ALIASES.get(request.model_engine, request.model_engine)
+                print(raw_request)
+                result = requests.post(
+                    TogetherClient.INFERENCE_ENDPOINT,
+                    json=raw_request,
+                    headers={"Authorization": self.api_key}
+                ).json()
+                
+                try:
+                    assert "output" in result, f"Invalid response: {result}"
+                    assert "error" not in result["output"], f"Invalid response: {result}"
+                except Exception as e:
+                    
+                    print('!?!?!?!?!?!?!? try api')
+                    
+                    result = requests.post(
+                        "https://api.together.xyz/inference",
+                        json=raw_request,
+                        headers={"Authorization": self.api_key}
+                    ).json()
+                    
                 assert "output" in result, f"Invalid response: {result}"
+                assert "error" not in result["output"], f"Invalid response: {result}"
+                
                 return result["output"]
 
             def fail():
@@ -83,11 +123,16 @@ class TogetherClient(Client):
 
             response, cached = self.cache.get(cache_key, wrap_request_time(do_it if self.api_key else fail))
         except RuntimeError as e:
+            print(e)
             error: str = f"TogetherClient error: {e}"
             return RequestResult(success=False, cached=False, error=error, completions=[], embedding=[])
 
         # Expect the result to be structured the same way as a response from OpenAI API.
         completions: List[Sequence] = []
+        
+        if 'error' in response:
+            print(raw_request)
+            print('!!!!!!!!!!!!!!!!!!')
         for raw_completion in response["choices"]:
             sequence_logprob = 0
             tokens: List[Token] = []
@@ -95,7 +140,7 @@ class TogetherClient(Client):
             # TODO: take this out when "logprobs" is supported properly in batch/offline mode
             # Currently, token_logprobs is provided in interactive/online mode but it has a different format
             # Waiting for a fix.
-            if "logprobs" in raw_completion:
+            if "logprobs" in raw_completion and raw_completion['logprobs']['top_logprobs'] is not None:
                 raw_data = raw_completion["logprobs"]
                 for text, logprob, top_logprobs in zip(
                     raw_data["tokens"], raw_data["token_logprobs"], raw_data["top_logprobs"]

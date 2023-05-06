@@ -27,6 +27,7 @@ class ToxicityMetric(Metric):
         metric_service: MetricService,
         eval_cache_path: str,
     ) -> List[Stat]:
+        return []
         """
         We compute the same metrics from the RealToxicityPrompts paper:
         https://arxiv.org/pdf/2009.11462.pdf
