@@ -3,11 +3,15 @@ from helm.proxy.models import (
     get_model_names_with_tag,
     Model,
     AI21_WIDER_CONTEXT_WINDOW_TAG,
+    AI21_JURASSIC_2_JUMBO_CONTEXT_WINDOW_TAG,
     WIDER_CONTEXT_WINDOW_TAG,
+    GPT4_TOKENIZER_TAG,
+    GPT4_CONTEXT_WINDOW_TAG,
+    GPT4_32K_CONTEXT_WINDOW_TAG,
 )
 from .ai21_window_service import AI21WindowService
-from .wider_ai21_window_service import WiderAI21WindowService
-from .anthropic_window_service import AnthropicWindowService
+from .wider_ai21_window_service import WiderAI21WindowService, AI21Jurassic2JumboWindowService
+from .anthropic_window_service import AnthropicWindowService, LegacyAnthropicWindowService
 from .cohere_window_service import CohereWindowService, CohereCommandWindowService
 from .luminous_window_service import (
     LuminousBaseWindowService,
@@ -16,16 +20,24 @@ from .luminous_window_service import (
     LuminousWorldWindowService,
 )
 from .openai_window_service import OpenAIWindowService
-from .wider_openai_window_service import WiderOpenAIWindowService
+from .wider_openai_window_service import (
+    WiderOpenAIWindowService,
+    GPT3Point5TurboWindowService,
+    GPT4WindowService,
+    GPT432KWindowService,
+)
 from .mt_nlg_window_service import MTNLGWindowService
 from .bloom_window_service import BloomWindowService
 from .huggingface_window_service import HuggingFaceWindowService
 from .ice_window_service import ICEWindowService
 from .santacoder_window_service import SantaCoderWindowService
+from .bigcode_large_model_window_service import BigCodeLargeModelWindowService
 from .gpt2_window_service import GPT2WindowService
 from .gptj_window_service import GPTJWindowService
 from .gptneox_window_service import GPTNeoXWindowService
 from .opt_window_service import OPTWindowService
+from .palmyra_window_service import PalmyraWindowService, SilkRoadWindowService
+from .remote_window_service import get_remote_window_service
 from .t0pp_window_service import T0ppWindowService
 from .t511b_window_service import T511bWindowService
 from .flan_t5_window_service import FlanT5WindowService
@@ -34,6 +46,7 @@ from .yalm_window_service import YaLMWindowService
 from .window_service import WindowService
 from .tokenizer_service import TokenizerService
 from helm.proxy.clients.huggingface_client import get_huggingface_model_config
+from helm.proxy.clients.remote_model_registry import get_remote_model
 
 
 class WindowServiceFactory:
@@ -49,12 +62,23 @@ class WindowServiceFactory:
 
         window_service: WindowService
         huggingface_model_config = get_huggingface_model_config(model_name)
-        if huggingface_model_config:
+        if get_remote_model(model_name):
+            window_service = get_remote_window_service(service, model_name)
+        elif huggingface_model_config:
             window_service = HuggingFaceWindowService(service=service, model_config=huggingface_model_config)
-        elif model_name in get_model_names_with_tag(WIDER_CONTEXT_WINDOW_TAG):
-            window_service = WiderOpenAIWindowService(service)
+        elif organization == "openai":
+            if model_name in get_model_names_with_tag(GPT4_CONTEXT_WINDOW_TAG):
+                window_service = GPT4WindowService(service)
+            elif model_name in get_model_names_with_tag(GPT4_32K_CONTEXT_WINDOW_TAG):
+                window_service = GPT432KWindowService(service)
+            elif model_name in get_model_names_with_tag(GPT4_TOKENIZER_TAG):
+                window_service = GPT3Point5TurboWindowService(service)
+            elif model_name in get_model_names_with_tag(WIDER_CONTEXT_WINDOW_TAG):
+                window_service = WiderOpenAIWindowService(service)
+            else:
+                window_service = OpenAIWindowService(service)
         # For the Google models, we approximate with the OpenAIWindowService
-        elif organization == "openai" or organization == "simple" or organization == "google":
+        elif organization == "simple" or organization == "google":
             window_service = OpenAIWindowService(service)
         elif organization == "AlephAlpha":
             if engine == "luminous-base":
@@ -70,9 +94,21 @@ class WindowServiceFactory:
         elif organization == "microsoft":
             window_service = MTNLGWindowService(service)
         elif organization == "anthropic":
-            window_service = AnthropicWindowService(service)
+            if engine == "stanford-online-all-v4-s3":
+                window_service = LegacyAnthropicWindowService(service)
+            else:
+                window_service = AnthropicWindowService(service)
+        elif organization == "writer":
+            if engine in ["palmyra-base", "palmyra-large", "palmyra-instruct-30", "palmyra-e"]:
+                window_service = PalmyraWindowService(service)
+            elif engine == "silk-road":
+                window_service = SilkRoadWindowService(service)
+            else:
+                raise ValueError(f"Unhandled Writer model: {engine}")
         elif engine == "santacoder":
             window_service = SantaCoderWindowService(service)
+        elif engine == "large-model":
+            window_service = BigCodeLargeModelWindowService(service)
         elif model_name == "huggingface/gpt2":
             window_service = GPT2WindowService(service)
         elif model_name == "together/bloom":
@@ -87,7 +123,7 @@ class WindowServiceFactory:
             window_service = GPTNeoXWindowService(service)
         elif model_name == "together/h3-2.7b":
             window_service = GPT2WindowService(service)
-        elif model_name in ["together/opt-66b", "together/opt-175b"]:
+        elif model_name in ["together/opt-1.3b", "together/opt-6.7b", "together/opt-66b", "together/opt-175b"]:
             window_service = OPTWindowService(service)
         elif model_name == "together/t0pp":
             window_service = T0ppWindowService(service)
@@ -107,6 +143,10 @@ class WindowServiceFactory:
         elif organization == "ai21":
             if model_name in get_model_names_with_tag(AI21_WIDER_CONTEXT_WINDOW_TAG):
                 window_service = WiderAI21WindowService(service=service, gpt2_window_service=GPT2WindowService(service))
+            if model_name in get_model_names_with_tag(AI21_JURASSIC_2_JUMBO_CONTEXT_WINDOW_TAG):
+                window_service = AI21Jurassic2JumboWindowService(
+                    service=service, gpt2_window_service=GPT2WindowService(service)
+                )
             else:
                 window_service = AI21WindowService(service=service, gpt2_window_service=GPT2WindowService(service))
         else:
