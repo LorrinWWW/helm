@@ -1,27 +1,35 @@
 import os
 from dataclasses import replace
-from typing import Dict, Optional, TYPE_CHECKING
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, Dict, Mapping, Optional
 
-from retrying import RetryError, Attempt
+from retrying import Attempt, RetryError
 
+from helm.benchmark.model_deployment_registry import get_model_deployment
 from helm.common.cache import CacheConfig, MongoCacheConfig, SqliteCacheConfig
 from helm.common.hierarchical_logger import hlog
+from helm.common.object_spec import create_object
 from helm.common.request import Request, RequestResult
 from helm.common.tokenization_request import (
-    TokenizationRequest,
-    TokenizationRequestResult,
     DecodeRequest,
     DecodeRequestResult,
+    TokenizationRequest,
+    TokenizationRequestResult,
 )
-from helm.proxy.retry import retry_request
-from helm.proxy.clients.critique_client import CritiqueClient
 from helm.proxy.clients.client import Client
+from helm.proxy.clients.critique_client import CritiqueClient
 from helm.proxy.clients.huggingface_model_registry import get_huggingface_model_config
 from helm.proxy.clients.toxicity_classifier_client import ToxicityClassifierClient
+from helm.proxy.retry import NonRetriableException, retry_request
 
+from .http_model_client import HTTPModelClient
 
 if TYPE_CHECKING:
     import helm.proxy.clients.huggingface_client
+
+
+class AuthenticationError(NonRetriableException):
+    pass
 
 
 class AutoClient(Client):
@@ -31,7 +39,7 @@ class AutoClient(Client):
     This greatly speeds up the import time of this module, and allows the client modules to
     use optional dependencies."""
 
-    def __init__(self, credentials: Dict[str, str], cache_path: str, mongo_uri: str = ""):
+    def __init__(self, credentials: Mapping[str, Any], cache_path: str, mongo_uri: str = ""):
         self.credentials = credentials
         self.cache_path = cache_path
         self.mongo_uri = mongo_uri
@@ -60,31 +68,35 @@ class AutoClient(Client):
             organization: str = model.split("/")[0]
             cache_config: CacheConfig = self._build_cache_config(organization)
 
-            if get_huggingface_model_config(model):
+            # TODO: Migrate all clients to use model deployments
+            model_deployment = get_model_deployment(model)
+            if model_deployment:
+                api_key = None
+                if "deployments" not in self.credentials:
+                    raise AuthenticationError("Could not find key 'deployments' in credentials.conf")
+                deployment_api_keys = self.credentials["deployments"]
+                if model not in deployment_api_keys:
+                    raise AuthenticationError(
+                        f"Could not find key '{model}' under key 'deployments' in credentials.conf"
+                    )
+                api_key = deployment_api_keys[model]
+                client = create_object(
+                    model_deployment.client_spec, additional_args={"cache_config": cache_config, "api_key": api_key}
+                )
+
+            elif get_huggingface_model_config(model):
                 from helm.proxy.clients.huggingface_client import HuggingFaceClient
 
                 client = HuggingFaceClient(cache_config=cache_config)
+            elif organization == "neurips":
+                client = HTTPModelClient(cache_config=cache_config)
             elif organization == "openai":
-                from helm.proxy.clients.chat_gpt_client import ChatGPTClient
                 from helm.proxy.clients.openai_client import OpenAIClient
-
-                # TODO: add ChatGPT to the OpenAIClient when it's supported.
-                #       We're using a separate client for now since we're using an unofficial Python library.
-                # See https://github.com/acheong08/ChatGPT/wiki/Setup on how to get a valid session token.
-                chat_gpt_client: ChatGPTClient = ChatGPTClient(
-                    session_token=self.credentials.get("chatGPTSessionToken", ""),
-                    lock_file_path=os.path.join(self.cache_path, "ChatGPT.lock"),
-                    # TODO: use `cache_config` above. Since this feature is still experimental,
-                    #       save queries and responses in a separate collection.
-                    cache_config=self._build_cache_config("ChatGPT"),
-                    tokenizer_client=self._get_tokenizer_client("huggingface"),
-                )
 
                 org_id = self.credentials.get("openaiOrgId", None)
                 api_key = self.credentials.get("openaiApiKey", None)
                 client = OpenAIClient(
                     cache_config=cache_config,
-                    chat_gpt_client=chat_gpt_client,
                     api_key=api_key,
                     org_id=org_id,
                 )
@@ -107,7 +119,7 @@ class AutoClient(Client):
                 client = GooseAIClient(
                     api_key=self.credentials["gooseaiApiKey"], cache_config=cache_config, org_id=org_id
                 )
-            elif organization == "huggingface" or organization == "mosaicml":
+            elif organization == "huggingface":
                 from helm.proxy.clients.huggingface_client import HuggingFaceClient
 
                 client = HuggingFaceClient(cache_config)
@@ -133,7 +145,17 @@ class AutoClient(Client):
                 from helm.proxy.clients.google_client import GoogleClient
 
                 client = GoogleClient(cache_config=cache_config)
-            elif organization == "together" or organization == "databricks":
+            elif organization in [
+                "together",
+                "databricks",
+                "eleutherai",
+                "lmsys",
+                "meta",
+                "mosaicml",
+                "stabilityai",
+                "stanford",
+                "tiiuae",
+            ]:
                 from helm.proxy.clients.together_client import TogetherClient
 
                 client = TogetherClient(api_key=self.credentials.get("togetherApiKey", None), cache_config=cache_config)
@@ -153,6 +175,16 @@ class AutoClient(Client):
                 from helm.proxy.clients.megatron_client import MegatronClient
 
                 client = MegatronClient(cache_config=cache_config)
+
+            elif organization == "lightningai":
+                from helm.proxy.clients.lit_gpt_client import LitGPTClient
+
+                client = LitGPTClient(
+                    cache_config=cache_config,
+                    checkpoint_dir=Path(os.environ.get("LIT_GPT_CHECKPOINT_DIR", "")),
+                    precision=os.environ.get("LIT_GPT_PRECISION", "bf16-true"),
+                )
+
             else:
                 raise ValueError(f"Could not find client for model: {model}")
             self.clients[model] = client
@@ -194,6 +226,8 @@ class AutoClient(Client):
                 from helm.proxy.clients.huggingface_client import HuggingFaceClient
 
                 client = HuggingFaceClient(cache_config=cache_config)
+            elif organization == "neurips":
+                client = HTTPModelClient(cache_config=cache_config)
             elif organization in [
                 "bigscience",
                 "bigcode",
@@ -202,7 +236,9 @@ class AutoClient(Client):
                 "google",
                 "gooseai",
                 "huggingface",
+                "meta-llama",
                 "microsoft",
+                "tiiuae",
                 "hf-internal-testing",
             ]:
                 from helm.proxy.clients.huggingface_client import HuggingFaceClient
@@ -248,6 +284,10 @@ class AutoClient(Client):
                 from helm.proxy.clients.megatron_client import MegatronClient
 
                 client = MegatronClient(cache_config=cache_config)
+
+            elif organization == "lightningai":
+                client = self._get_client(tokenizer)
+
             else:
                 raise ValueError(f"Could not find tokenizer client for model: {tokenizer}")
             self.tokenizer_clients[tokenizer] = client
@@ -302,11 +342,15 @@ class AutoClient(Client):
 
             self._critique_client = RandomCritiqueClient()
         elif critique_type == "mturk":
-            from helm.proxy.clients.mechanical_turk_critique_client import MechanicalTurkCritiqueClient
+            from helm.proxy.clients.mechanical_turk_critique_client import (
+                MechanicalTurkCritiqueClient,
+            )
 
             self._critique_client = MechanicalTurkCritiqueClient()
         elif critique_type == "surgeai":
-            from helm.proxy.clients.surge_ai_critique_client import SurgeAICritiqueClient
+            from helm.proxy.clients.surge_ai_critique_client import (
+                SurgeAICritiqueClient,
+            )
 
             surgeai_credentials = self.credentials.get("surgeaiApiKey")
             if not surgeai_credentials:

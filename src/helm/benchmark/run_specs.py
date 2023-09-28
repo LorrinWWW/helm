@@ -1,4 +1,6 @@
+import importlib
 import itertools
+from functools import partial
 from typing import Any, Callable, List, Dict, Optional, Set, TypeVar
 
 from helm.common.hierarchical_logger import hlog, htrack
@@ -13,6 +15,7 @@ from helm.benchmark.adaptation.adapters.adapter_factory import (
 )
 from helm.benchmark.adaptation.adapters.binary_ranking_adapter import BinaryRankingAdapter
 from helm.benchmark.adaptation.adapter_spec import AdapterSpec
+from helm.common.optional_dependencies import handle_module_not_found_error
 from .metrics.metric import MetricSpec
 from .run_expander import (
     RUN_EXPANDERS,
@@ -34,7 +37,6 @@ from .scenarios.lex_glue_scenario import (
 from .scenarios.scenario import ScenarioSpec
 from .scenarios.big_bench_scenario import BIGBenchScenario
 from .scenarios.msmarco_scenario import MSMARCOScenario
-from .scenarios.numeracy_scenario import get_numeracy_adapter_spec, RELTYPE_INFO
 from .scenarios.copyright_scenario import datatag2hash_code
 from .scenarios.raft_scenario import get_raft_instructions
 from .scenarios.lextreme_scenario import (
@@ -54,8 +56,6 @@ from helm.proxy.models import (
     BUGGY_TEMP_0_TAG,
 )
 from helm.common.general import singleton
-import anthropic
-from helm.proxy.clients.anthropic_client import AnthropicClient
 
 max_train_instances_bias = 5
 
@@ -272,6 +272,7 @@ def get_generation_adapter_spec(
     max_tokens: int = 5,
     stop_sequences: Optional[List] = None,  # default value of `stop_sequences` is ["\n"]
     temperature: float = 0.0,
+    multi_label: bool = False,
 ) -> AdapterSpec:
     """
     [instructions]
@@ -312,6 +313,7 @@ def get_generation_adapter_spec(
         max_tokens=max_tokens,
         temperature=temperature,
         stop_sequences=stop_sequences,
+        multi_label=multi_label,
     )
 
 
@@ -440,7 +442,7 @@ def get_adapter_spec1() -> AdapterSpec:
 
 
 def get_basic_metric_specs(names: List[str]) -> List[MetricSpec]:
-    return [MetricSpec(class_name="helm.benchmark.basic_metrics.BasicMetric", args={"names": names})]
+    return [MetricSpec(class_name="helm.benchmark.metrics.basic_metrics.BasicMetric", args={"names": names})]
 
 
 def get_exact_match_metric_specs() -> List[MetricSpec]:
@@ -456,13 +458,24 @@ def get_f1_metric_specs() -> List[MetricSpec]:
 def get_classification_metric_specs(delimiter: Optional[str] = None) -> List[MetricSpec]:
     return [
         MetricSpec(
-            class_name="helm.benchmark.classification_metrics.ClassificationMetric", args={"delimiter": delimiter}
+            class_name="helm.benchmark.metrics.classification_metrics.ClassificationMetric",
+            args={"delimiter": delimiter},
+        )
+    ]
+
+
+def get_multiple_choice_classification_metric_specs() -> List[MetricSpec]:
+    return [
+        MetricSpec(
+            class_name="helm.benchmark.metrics.classification_metrics.MultipleChoiceClassificationMetric", args={}
         )
     ]
 
 
 def get_bbq_metric_specs() -> List[MetricSpec]:
-    return [MetricSpec(class_name="helm.benchmark.bbq_metrics.BBQMetric", args={})] + get_exact_match_metric_specs()
+    return [
+        MetricSpec(class_name="helm.benchmark.metrics.bbq_metrics.BBQMetric", args={})
+    ] + get_exact_match_metric_specs()
 
 
 def get_msmarco_metric_specs(track: str, rank: Optional[int] = None) -> List[MetricSpec]:
@@ -472,7 +485,7 @@ def get_msmarco_metric_specs(track: str, rank: Optional[int] = None) -> List[Met
 
     return [
         MetricSpec(
-            class_name="helm.benchmark.ranking_metrics.RankingMetric",
+            class_name="helm.benchmark.metrics.ranking_metrics.RankingMetric",
             args={
                 "method": ADAPT_RANKING_BINARY,
                 "measure_names": measure_names,
@@ -487,7 +500,7 @@ def get_msmarco_metric_specs(track: str, rank: Optional[int] = None) -> List[Met
 
 def get_toxicity_metric_specs() -> List[MetricSpec]:
     return [
-        MetricSpec(class_name="helm.benchmark.toxicity_metrics.ToxicityMetric", args={}),
+        MetricSpec(class_name="helm.benchmark.metrics.toxicity_metrics.ToxicityMetric", args={}),
     ]
 
 
@@ -498,13 +511,13 @@ def get_bias_metric_specs() -> List[MetricSpec]:
 
     return [
         MetricSpec(
-            class_name="helm.benchmark.bias_metrics.BiasMetric",
+            class_name="helm.benchmark.metrics.bias_metrics.BiasMetric",
             args={"mode": "associations", "demographic_category": dem, "target_category": tgt},
         )
         for dem, tgt in cross_dem_target
     ] + [
         MetricSpec(
-            class_name="helm.benchmark.bias_metrics.BiasMetric",
+            class_name="helm.benchmark.metrics.bias_metrics.BiasMetric",
             args={"mode": "representation", "demographic_category": dem},
         )
         for dem in demographic_categories
@@ -521,14 +534,14 @@ def get_generative_harms_metric_specs(include_basic_metrics: bool = False) -> Li
 
 def get_summarization_metric_specs(args: Dict[str, Any]) -> List[MetricSpec]:
     return [
-        MetricSpec(class_name="helm.benchmark.summarization_metrics.SummarizationMetric", args=args)
+        MetricSpec(class_name="helm.benchmark.metrics.summarization_metrics.SummarizationMetric", args=args)
     ] + get_basic_metric_specs([])
 
 
 def get_summarization_critique_metric_specs(num_respondents: int) -> List[MetricSpec]:
     return [
         MetricSpec(
-            class_name="helm.benchmark.summarization_critique_metrics.SummarizationCritiqueMetric",
+            class_name="helm.benchmark.metrics.summarization_critique_metrics.SummarizationCritiqueMetric",
             args={"num_respondents": num_respondents},
         )
     ]
@@ -546,7 +559,7 @@ def get_numeracy_metric_specs(run_solver: bool = False) -> List[MetricSpec]:
     # The solvers are slow to run so make them skippable
     if run_solver:
         metric_specs += [
-            MetricSpec(class_name="helm.benchmark.numeracy_metrics.DistanceMetric", args={}),
+            MetricSpec(class_name="helm.benchmark.metrics.numeracy_metrics.DistanceMetric", args={}),
         ]
     return metric_specs
 
@@ -560,15 +573,15 @@ def get_copyright_metric_specs(args: Optional[Dict] = None) -> List[MetricSpec]:
         args = {}
     return [
         MetricSpec(
-            class_name="helm.benchmark.copyright_metrics.BasicCopyrightMetric",
+            class_name="helm.benchmark.metrics.copyright_metrics.BasicCopyrightMetric",
             args={**args, "name": "longest_common_prefix_length"},
         ),
         MetricSpec(
-            class_name="helm.benchmark.copyright_metrics.BasicCopyrightMetric",
+            class_name="helm.benchmark.metrics.copyright_metrics.BasicCopyrightMetric",
             args={**args, "name": "edit_distance"},
         ),
         MetricSpec(
-            class_name="helm.benchmark.copyright_metrics.BasicCopyrightMetric",
+            class_name="helm.benchmark.metrics.copyright_metrics.BasicCopyrightMetric",
             args={**args, "name": "edit_similarity"},
         ),
     ] + get_basic_metric_specs([])
@@ -578,10 +591,14 @@ def get_disinformation_metric_specs(args: Optional[Dict] = None) -> List[MetricS
     if args is None:
         args = {}
     return [
-        MetricSpec(class_name="helm.benchmark.disinformation_metrics.DisinformationHumanEvalMetrics", args={**args}),
-        MetricSpec(class_name="helm.benchmark.disinformation_metrics.DisinformationMetric", args={"name": "self_bleu"}),
         MetricSpec(
-            class_name="helm.benchmark.disinformation_metrics.DisinformationMetric",
+            class_name="helm.benchmark.metrics.disinformation_metrics.DisinformationHumanEvalMetrics", args={**args}
+        ),
+        MetricSpec(
+            class_name="helm.benchmark.metrics.disinformation_metrics.DisinformationMetric", args={"name": "self_bleu"}
+        ),
+        MetricSpec(
+            class_name="helm.benchmark.metrics.disinformation_metrics.DisinformationMetric",
             args={"name": "monte_carlo_entropy"},
         ),
     ] + get_basic_metric_specs([])
@@ -592,7 +609,7 @@ def get_code_metric_specs(dataset: str, timeout: float) -> List[MetricSpec]:
         return get_basic_metric_specs(["code_eval_acc", "pass"])
     else:  # APPS.
         args: Dict[str, Any] = {"names": ["test_avg", "strict_acc"], "timeout": timeout}
-        return [MetricSpec(class_name="helm.benchmark.code_metrics.APPSMetric", args=args)]
+        return [MetricSpec(class_name="helm.benchmark.metrics.code_metrics.APPSMetric", args=args)]
 
 
 def get_open_ended_generation_metric_specs() -> List[MetricSpec]:
@@ -601,7 +618,24 @@ def get_open_ended_generation_metric_specs() -> List[MetricSpec]:
 
 def get_machine_translation_metric_specs() -> List[MetricSpec]:
     return [
-        MetricSpec(class_name="helm.benchmark.machine_translation_metrics.MachineTranslationMetric", args={})
+        MetricSpec(class_name="helm.benchmark.metrics.machine_translation_metrics.MachineTranslationMetric", args={})
+    ] + get_basic_metric_specs([])
+
+
+def get_cleva_machine_translation_metric_specs() -> List[MetricSpec]:
+    return [
+        MetricSpec(
+            class_name="helm.benchmark.metrics.machine_translation_metrics.CLEVAMachineTranslationMetric", args={}
+        )
+    ] + get_basic_metric_specs([])
+
+
+def get_cleva_paraphrase_generation_metric_specs(alpha: float = 0.8) -> List[MetricSpec]:
+    return [
+        MetricSpec(
+            class_name="helm.benchmark.metrics.paraphrase_generation_metrics.CLEVAParaphraseGenerationMetric",
+            args={"alpha": alpha},  # calculate iBLEU_0.8 by default
+        )
     ] + get_basic_metric_specs([])
 
 
@@ -616,6 +650,114 @@ def get_instruction_following_critique_metric_specs(num_respondents: int) -> Lis
             args={"num_respondents": num_respondents},
         )
     ]
+
+
+def get_cleva_topk_accuracy_metric_specs(k: int = 1, cut_off: int = 5) -> List[MetricSpec]:
+    return [
+        MetricSpec(
+            class_name="helm.benchmark.metrics.cleva_accuracy_metrics.CLEVATopKAccuracyMetric",
+            args={"k": k, "cut_off": cut_off},
+        )
+    ]
+
+
+def get_cleva_bias_metric_specs() -> List[MetricSpec]:
+    demographic_categories = ["race", "gender"]
+    target_categories = ["adjective", "profession"]
+    cross_dem_target = itertools.product(demographic_categories, target_categories)
+
+    return [
+        MetricSpec(
+            class_name="helm.benchmark.metrics.cleva_harms_metrics.CLEVABiasMetric",
+            args={"mode": "associations", "demographic_category": dem, "target_category": tgt},
+        )
+        for dem, tgt in cross_dem_target
+    ] + [
+        MetricSpec(
+            class_name="helm.benchmark.metrics.cleva_harms_metrics.CLEVABiasMetric",
+            args={"mode": "representation", "demographic_category": dem},
+        )
+        for dem in demographic_categories
+    ]
+
+
+def get_cleva_toxicity_metric_specs() -> List[MetricSpec]:
+    return [
+        MetricSpec(class_name="helm.benchmark.metrics.cleva_harms_metrics.CLEVAToxicityMetric", args={}),
+    ]
+
+
+def get_cleva_generative_harms_metric_specs(include_basic_metrics: bool = False) -> List[MetricSpec]:
+    return (
+        get_cleva_bias_metric_specs()
+        + get_cleva_toxicity_metric_specs()
+        + (get_basic_metric_specs([]) if include_basic_metrics else [])
+    )
+
+
+def get_cleva_copyright_metric_spec(args: Optional[Dict] = None) -> List[MetricSpec]:
+    if args is None:
+        args = {}
+    return [
+        MetricSpec(
+            class_name="helm.benchmark.metrics.cleva_harms_metrics.CLEVACopyrightMetric",
+            args={**args, "name": "longest_common_prefix_length"},
+        ),
+        MetricSpec(
+            class_name="helm.benchmark.metrics.cleva_harms_metrics.CLEVACopyrightMetric",
+            args={**args, "name": "edit_distance"},
+        ),
+        MetricSpec(
+            class_name="helm.benchmark.metrics.cleva_harms_metrics.CLEVACopyrightMetric",
+            args={**args, "name": "edit_similarity"},
+        ),
+    ]
+
+
+def get_cleva_generative_task_metric_spec(task: str, subtask: Optional[str], **kwargs) -> List[MetricSpec]:
+    CLEVA_GEN_TASK_TO_METRIC: Dict[str, Callable] = {
+        "opinion_mining:opinion_target_extraction": get_exact_match_metric_specs,
+        "paraphrase_generation": get_cleva_paraphrase_generation_metric_specs,
+        "closed_book_question_answering:generative_question_answering": get_exact_match_metric_specs,
+        "conceptual_generalization": get_cleva_topk_accuracy_metric_specs,
+        "translation:en2zh": get_cleva_machine_translation_metric_specs,
+        "translation:zh2en": get_cleva_machine_translation_metric_specs,
+        "mathematical_calculation:add": get_exact_match_metric_specs,
+        "mathematical_calculation:sub": get_exact_match_metric_specs,
+        "mathematical_calculation:mul": get_exact_match_metric_specs,
+        "inductive_reasoning:add": get_exact_match_metric_specs,
+        "inductive_reasoning:sub": get_exact_match_metric_specs,
+        "inductive_reasoning:mul": get_exact_match_metric_specs,
+        "reasoning_primitive:dyck_language": get_exact_match_metric_specs,
+        "reasoning_primitive:pattern_induction": get_exact_match_metric_specs,
+        "reasoning_primitive:pattern_matching": get_exact_match_metric_specs,
+        "reasoning_primitive:variable_sub": get_exact_match_metric_specs,
+        "subject_knowledge:art": get_exact_match_metric_specs,
+        "subject_knowledge:biomedicine": get_exact_match_metric_specs,
+        "subject_knowledge:chemistry": get_exact_match_metric_specs,
+        "subject_knowledge:computer_science": get_exact_match_metric_specs,
+        "subject_knowledge:economics": get_exact_match_metric_specs,
+        "subject_knowledge:geography": get_exact_match_metric_specs,
+        "subject_knowledge:history": get_exact_match_metric_specs,
+        "subject_knowledge:law": get_exact_match_metric_specs,
+        "subject_knowledge:literature": get_exact_match_metric_specs,
+        "subject_knowledge:math": get_exact_match_metric_specs,
+        "subject_knowledge:other_general": get_exact_match_metric_specs,
+        "subject_knowledge:philosophy": get_exact_match_metric_specs,
+        "subject_knowledge:physics": get_exact_match_metric_specs,
+        "subject_knowledge:politics": get_exact_match_metric_specs,
+        "summarization:dialogue_summarization": partial(get_basic_metric_specs, ["chinese_rouge_2"]),
+        "pinyin_transliteration:pinyin2zh": partial(get_basic_metric_specs, ["chinese_bleu_1"]),
+        "pinyin_transliteration:zh2pinyin": partial(get_basic_metric_specs, ["chinese_bleu_1"]),
+        "dialogue_generation:task_oriented": partial(get_basic_metric_specs, ["chinese_bleu_1"]),
+        "data_to_text_generation": partial(get_basic_metric_specs, ["chinese_bleu_1"]),
+        "mathematical_reasoning:math_world_problem": partial(get_basic_metric_specs, ["cleva_math_result_match"]),
+    }
+
+    key: str = task
+    if subtask is not None:
+        key += ":" + subtask
+    return CLEVA_GEN_TASK_TO_METRIC[key](**kwargs)
 
 
 ############################################################
@@ -727,9 +869,7 @@ def get_civil_comments_spec(demographic: str) -> RunSpec:
         name=f"civil_comments:demographic={demographic}",
         scenario_spec=scenario_spec,
         adapter_spec=adapter_spec,
-        metric_specs=get_exact_match_metric_specs()
-        + get_generative_harms_metric_specs()
-        + get_classification_metric_specs(),
+        metric_specs=get_exact_match_metric_specs() + get_bias_metric_specs() + get_classification_metric_specs(),
         groups=["civil_comments"],
     )
 
@@ -986,9 +1126,7 @@ def get_raft_spec(subset: str) -> RunSpec:
         name=f"raft:subset={subset}",
         scenario_spec=scenario_spec,
         adapter_spec=adapter_spec,
-        metric_specs=get_exact_match_metric_specs()
-        + get_generative_harms_metric_specs()
-        + get_classification_metric_specs(),
+        metric_specs=get_exact_match_metric_specs() + get_bias_metric_specs() + get_classification_metric_specs(),
         groups=["raft"],
     )
 
@@ -997,6 +1135,8 @@ def get_raft_spec(subset: str) -> RunSpec:
 def get_numeracy_spec(
     relation_type: str = "linear", mode: str = "function", seed: str = "0", run_solver: str = "False"
 ) -> RunSpec:
+    from .scenarios.numeracy_scenario import get_numeracy_adapter_spec, RELTYPE_INFO
+
     run_solver: bool = True if run_solver == "True" else False  # type: ignore
     random_seed = int(seed)
     scenario_spec = ScenarioSpec(
@@ -1115,7 +1255,7 @@ def get_boolq_spec(only_contrast=False) -> RunSpec:
         name="boolq" + (":only_contrast=True" if only_contrast else ""),
         scenario_spec=scenario_spec,
         adapter_spec=adapter_spec,
-        metric_specs=get_exact_match_metric_specs() + get_generative_harms_metric_specs(),
+        metric_specs=get_exact_match_metric_specs() + get_bias_metric_specs(),
         groups=["boolq"],
     )
 
@@ -1886,16 +2026,10 @@ def get_pubmed_qa_spec() -> RunSpec:
     )
 
 
-def build_classification_metrics(task_type):
-    if task_type in [TaskType.QA, TaskType.SLTC]:
-        return get_classification_metric_specs(delimiter=None)
-    elif task_type == TaskType.MLTC:
-        return get_classification_metric_specs(delimiter=",")
-    return []
-
-
 @run_spec_function("lextreme")
 def get_lextreme_spec(subset: str) -> RunSpec:
+    task_type = get_lextreme_task_type(subset)
+
     scenario_spec = ScenarioSpec(
         class_name="helm.benchmark.scenarios.lextreme_scenario.LEXTREMEScenario",
         args={"subset": subset},
@@ -1907,19 +2041,28 @@ def get_lextreme_spec(subset: str) -> RunSpec:
         output_noun="Answer",
         max_tokens=get_lextreme_max_tokens(subset),
         max_train_instances=get_lextreme_max_train_instances(subset),  # in some subsets the input is very long
+        multi_label=(task_type == TaskType.MLTC),
     )
+
+    metric_specs = get_basic_metric_specs([])
+    if task_type == TaskType.MLTC:
+        metric_specs += get_classification_metric_specs(delimiter=", ")
+    elif task_type == TaskType.SLTC:
+        metric_specs += get_classification_metric_specs()
 
     return RunSpec(
         name=f"lextreme:subset={subset}",
         scenario_spec=scenario_spec,
         adapter_spec=adapter_spec,
-        metric_specs=build_classification_metrics(get_lextreme_task_type(subset)),
+        metric_specs=metric_specs,
         groups=["lextreme"],
     )
 
 
 @run_spec_function("lex_glue")
 def get_lex_glue_spec(subset: str) -> RunSpec:
+    task_type = get_lex_glue_task_type(subset)
+
     scenario_spec = ScenarioSpec(
         class_name="helm.benchmark.scenarios.lex_glue_scenario.LexGLUEScenario",
         args={"subset": subset},
@@ -1931,13 +2074,20 @@ def get_lex_glue_spec(subset: str) -> RunSpec:
         output_noun="Answer",
         max_tokens=get_lex_glue_max_tokens(subset),
         max_train_instances=get_lex_glue_max_train_instances(subset),  # in some subsets the input is very long
+        multi_label=(task_type == TaskType.MLTC),
     )
+
+    metric_specs = get_basic_metric_specs([])
+    if task_type == TaskType.MLTC:
+        metric_specs += get_classification_metric_specs(delimiter=", ")
+    elif task_type == TaskType.SLTC:
+        metric_specs += get_classification_metric_specs()
 
     return RunSpec(
         name=f"lex_glue:subset={subset}",
         scenario_spec=scenario_spec,
         adapter_spec=adapter_spec,
-        metric_specs=build_classification_metrics(get_lex_glue_task_type(subset)),
+        metric_specs=metric_specs,
         groups=["lex_glue"],
     )
 
@@ -2228,6 +2378,118 @@ def get_anthropic_hh_rlhf_spec(num_respondents: int, subset: str) -> RunSpec:
     )
 
 
+@run_spec_function("cleva")
+def get_cleva_spec(task: str, version: str, subtask: str = None, prompt_id: int = 0) -> RunSpec:
+    from .scenarios.cleva_scenario import CLEVAScenario  # noqa
+
+    CLEVAScenario.download_dataset()
+
+    _, prompt_setting = CLEVAScenario.get_prompt_setting(task, subtask, version, prompt_id)
+    inference_parameters = CLEVAScenario.load_inference_parameters(task, subtask, version, prompt_id)
+
+    class_name_prefix = "".join([word.capitalize() for word in task.split("_")])
+    scenario_spec = ScenarioSpec(
+        class_name=f"helm.benchmark.scenarios.cleva_scenario.CLEVA{class_name_prefix}Scenario",
+        args={"version": version, "subtask": subtask, "prompt_id": prompt_id},
+    )
+    run_spec_name: str = f"cleva:task={task},version={version},prompt_id={prompt_id}"
+    if subtask:
+        run_spec_name += f",subtask={subtask}"
+
+    if task in ["copyright"]:
+        adapter_spec = get_completion_adapter_spec(
+            temperature=inference_parameters.get("temperature", 0.2),
+            max_tokens=inference_parameters.get("max_tokens", 1024),
+            num_outputs=inference_parameters.get("num_outputs", 1),
+        )
+        args = {"normalize_by_prefix_length": True, "normalize_newline_space_tab": False}
+        metric_specs = get_cleva_copyright_metric_spec(args) + get_cleva_generative_harms_metric_specs()
+    elif task in ["code_synthesis"]:
+        adapter_spec = get_completion_adapter_spec(
+            instructions=prompt_setting.instructions,
+            temperature=inference_parameters.get("temperature", 0.2),
+            # Taken from the original OpenAI paper to prevent the further generation of irrelevant classes/functions
+            stop_sequences=inference_parameters.get("stop_sequences", ["\nclass", "\ndef", "\nif", "\nprint"]),
+            max_tokens=inference_parameters.get("max_tokens", 600),
+        )
+        metric_specs = get_basic_metric_specs(["code_eval_acc", "pass"]) + get_cleva_generative_harms_metric_specs()
+    elif task in ["language_modeling"]:
+        adapter_spec = get_language_modeling_adapter_spec()
+        metric_specs = get_basic_metric_specs([])
+    else:
+        if prompt_setting.method in [
+            ADAPT_MULTIPLE_CHOICE_JOINT,
+            ADAPT_MULTIPLE_CHOICE_SEPARATE_CALIBRATED,
+            ADAPT_MULTIPLE_CHOICE_SEPARATE_ORIGINAL,
+        ]:
+            if prompt_setting.method == ADAPT_MULTIPLE_CHOICE_JOINT:
+                adapter_spec = AdapterSpec(
+                    method=prompt_setting.method,
+                    instructions=prompt_setting.instructions,
+                    input_prefix=prompt_setting.input_prefix,
+                    input_suffix=prompt_setting.input_suffix,
+                    output_prefix=prompt_setting.output_prefix,
+                    output_suffix=prompt_setting.output_suffix,
+                    max_train_instances=inference_parameters.get("max_train_instances", 5),
+                    num_outputs=inference_parameters.get("num_outputs", 5),
+                    max_tokens=inference_parameters.get("max_tokens", 5),
+                    temperature=inference_parameters.get("temperature", 0.0),
+                    stop_sequences=inference_parameters.get("stop_sequences", ["\n"]),
+                    sample_train=inference_parameters.get("sample_train", True),
+                    multi_label=inference_parameters.get("multi_label", False),
+                )
+            else:
+                adapter_spec = AdapterSpec(
+                    method=prompt_setting.method,
+                    instructions=prompt_setting.instructions,
+                    input_prefix=prompt_setting.input_prefix,
+                    input_suffix=prompt_setting.input_suffix,
+                    output_prefix=prompt_setting.output_prefix,
+                    output_suffix=prompt_setting.output_suffix,
+                    # Separate is basically language modeling, so can't easily use in-context examples
+                    max_train_instances=inference_parameters.get("max_train_instances", 5),
+                    num_outputs=1,
+                    max_tokens=0,
+                    temperature=inference_parameters.get("temperature", 0.0),
+                    sample_train=inference_parameters.get("sample_train", True),
+                )
+            metric_specs = get_exact_match_metric_specs()
+            if task in ["fact_checking", "bias"]:
+                metric_specs += get_multiple_choice_classification_metric_specs()
+        elif prompt_setting.method == ADAPT_GENERATION:
+            adapter_spec = AdapterSpec(
+                method=prompt_setting.method,
+                instructions=prompt_setting.instructions,
+                input_prefix=prompt_setting.input_prefix,
+                input_suffix=prompt_setting.input_suffix,
+                output_prefix=prompt_setting.output_prefix,
+                output_suffix=prompt_setting.output_suffix,
+                max_train_instances=inference_parameters.get("max_train_instances", 5),
+                num_outputs=inference_parameters.get("num_outputs", 1),
+                max_tokens=inference_parameters.get("max_tokens", 20),
+                temperature=inference_parameters.get("temperature", 0.0),
+                stop_sequences=inference_parameters.get("stop_sequences", ["\n"]),
+                sample_train=inference_parameters.get("sample_train", True),
+                multi_label=inference_parameters.get("multi_label", True),
+            )
+            metric_specs = (
+                get_cleva_generative_task_metric_spec(task, subtask) + get_cleva_generative_harms_metric_specs()
+            )
+        else:
+            raise ValueError(
+                f"{task} can only be {ADAPT_GENERATION}, {ADAPT_MULTIPLE_CHOICE_JOINT}, "
+                f"{ADAPT_MULTIPLE_CHOICE_SEPARATE_CALIBRATED} or {ADAPT_MULTIPLE_CHOICE_SEPARATE_ORIGINAL}"
+            )
+
+    return RunSpec(
+        name=run_spec_name,
+        scenario_spec=scenario_spec,
+        adapter_spec=adapter_spec,
+        metric_specs=metric_specs,
+        groups=["cleva", f"cleva_{task}"],
+    )
+
+
 ############################################################
 
 
@@ -2281,14 +2543,19 @@ def construct_run_specs(spec: ObjectSpec) -> List[RunSpec]:
             run_spec = singleton(chatml_expander.expand(run_spec))
 
         if ANTHROPIC_MODEL_TAG in model.tags:
+            try:
+                import anthropic
+                from helm.proxy.clients.anthropic_client import AnthropicClient
+            except ModuleNotFoundError as e:
+                handle_module_not_found_error(e)
             add_to_stop_expander = AddToStopRunExpander(anthropic.HUMAN_PROMPT)
             increase_max_tokens_expander = IncreaseMaxTokensRunExpander(value=AnthropicClient.ADDITIONAL_TOKENS)
             # Get scenario tags
             components = run_spec.scenario_spec.class_name.split(".")
-            module: Any = __import__(components[0])
-            for component in components[1:]:
-                module = getattr(module, component)
-            scenario_tags: List[str] = module.tags
+            class_name = components[-1]
+            module_name = ".".join(components[:-1])
+            cls = getattr(importlib.import_module(module_name), class_name)
+            scenario_tags: List[str] = cls.tags
             # If the scenario is instruction, do not use PROMPT_ANSWER_START
             if "instructions" in scenario_tags:
                 format_expander = FormatPromptRunExpander(

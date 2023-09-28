@@ -1,3 +1,4 @@
+# mypy: check_untyped_defs = False
 """Diversity metrics for the disinformation scenario."""
 
 import json
@@ -5,9 +6,9 @@ import os
 from typing import Dict, List, Optional
 
 import numpy as np
-from sacrebleu.metrics import BLEU
 
 from helm.common.general import ensure_file_downloaded
+from helm.common.optional_dependencies import handle_module_not_found_error
 from helm.common.request import RequestResult, Sequence
 from helm.benchmark.adaptation.request_state import RequestState
 from helm.benchmark.adaptation.adapter_spec import AdapterSpec
@@ -15,6 +16,11 @@ from .metric import Metric
 from .metric_name import MetricName
 from .metric_service import MetricService
 from .statistic import Stat
+
+try:
+    from sacrebleu.metrics import BLEU
+except ModuleNotFoundError as e:
+    handle_module_not_found_error(e)
 
 
 HUMAN_EVAL_CODALAB_LINK: str = (

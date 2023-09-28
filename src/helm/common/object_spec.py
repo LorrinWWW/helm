@@ -1,5 +1,6 @@
+import importlib
 from dataclasses import dataclass
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Optional, Tuple, Hashable, Type
 
 
 @dataclass(frozen=True)
@@ -13,17 +14,32 @@ class ObjectSpec:
     args: Dict[str, Any]
 
     def __hash__(self):
-        return hash((self.class_name, tuple((k, self.args[k]) for k in sorted(self.args.keys()))))
+        def get_arg_value(key: str) -> Any:
+            value = self.args[key]
+            # Convert non hashable objects into string
+            if not isinstance(value, Hashable):
+                return value.__str__()
+            return value
+
+        args_tuple = tuple((k, get_arg_value(k)) for k in sorted(self.args.keys()))
+        return hash((self.class_name, args_tuple))
 
 
-def create_object(spec: ObjectSpec):
+def get_class_by_name(full_class_name: str) -> Type[Any]:
+    components = full_class_name.split(".")
+    class_name = components[-1]
+    module_name = ".".join(components[:-1])
+    return getattr(importlib.import_module(module_name), class_name)
+
+
+def create_object(spec: ObjectSpec, additional_args: Optional[Dict[str, Any]] = None):
     """Create the actual object given the `spec`."""
-    # Adapted from https://stackoverflow.com/questions/547829/how-to-dynamically-load-a-python-class
-    components = spec.class_name.split(".")
-    module: Any = __import__(components[0])
-    for component in components[1:]:
-        module = getattr(module, component)
-    return module(**spec.args)
+    cls = get_class_by_name(spec.class_name)
+    args = {}
+    args.update(spec.args)
+    if additional_args:
+        args.update(additional_args)
+    return cls(**args)
 
 
 def parse_object_spec(description: str) -> ObjectSpec:

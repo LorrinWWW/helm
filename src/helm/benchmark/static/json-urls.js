@@ -1,24 +1,32 @@
 ////////////////////////////////////////////////////////////
 // Helper functions for getting URLs of JSON files
-
-function summaryJsonUrl(suite) {
-  return `${BENCHMARK_OUTPUT_BASE_URL}/runs/${suite}/summary.json`;
+function baseUrlWithDirectories(version, using_release) {
+  parent_directory = (using_release ? 'releases' : 'runs');
+  return `${BENCHMARK_OUTPUT_BASE_URL}/${parent_directory}/${version}`
 }
 
-function runSpecsJsonUrl(suite) {
-  return `${BENCHMARK_OUTPUT_BASE_URL}/runs/${suite}/run_specs.json`;
+function summaryJsonUrl(version, using_release) {
+  return `${baseUrlWithDirectories(version, using_release)}/summary.json`;
 }
 
-function groupsMetadataJsonUrl(suite) {
-  return `${BENCHMARK_OUTPUT_BASE_URL}/runs/${suite}/groups_metadata.json`;
+function runsToRunSuitesJsonUrl(version, using_release) {
+  return `${baseUrlWithDirectories(version, using_release)}/runs_to_run_suites.json`;
 }
 
-function groupsJsonUrl(suite) {
-  return `${BENCHMARK_OUTPUT_BASE_URL}/runs/${suite}/groups.json`;
+function runSpecsJsonUrl(version, using_release) {
+  return `${baseUrlWithDirectories(version, using_release)}/run_specs.json`;
 }
 
-function groupJsonUrl(suite, groupName) {
-  return `${BENCHMARK_OUTPUT_BASE_URL}/runs/${suite}/groups/${groupName}.json`;
+function groupsMetadataJsonUrl(version, using_release) {
+  return `${baseUrlWithDirectories(version, using_release)}/groups_metadata.json`;
+}
+
+function groupsJsonUrl(version, using_release) {
+  return `${baseUrlWithDirectories(version, using_release)}/groups.json`;
+}
+
+function groupJsonUrl(version, using_release, groupName) {
+  return `${baseUrlWithDirectories(version, using_release)}/groups/${groupName}.json`;
 }
 
 function runSpecJsonUrl(suite, runSpecName) {

@@ -56,7 +56,7 @@ models:
   # TODO: add Luminous World when it's released
   - name: AlephAlpha/luminous-base
     display_name: Luminous Base (13B)
-    description: Luminous Base (13B parameters) ([docs](https://docs.aleph-alpha.com/docs/introduction/luminous/)
+    description: Luminous Base (13B parameters) ([docs](https://docs.aleph-alpha.com/docs/introduction/luminous/))
     creator_organization: Aleph Alpha
     access: limited
     num_parameters: 13000000000
@@ -64,18 +64,28 @@ models:
     release_date: 2022-01-01
   - name: AlephAlpha/luminous-extended
     display_name: Luminous Extended (30B)
-    description: Luminous Extended (30B parameters) ([docs](https://docs.aleph-alpha.com/docs/introduction/luminous/)
+    description: Luminous Extended (30B parameters) ([docs](https://docs.aleph-alpha.com/docs/introduction/luminous/))
     creator_organization: Aleph Alpha
     access: limited
     num_parameters: 30000000000
     release_date: 2022-01-01
   - name: AlephAlpha/luminous-supreme
     display_name: Luminous Supreme (70B)
-    description: Luminous Supreme (70B parameters) ([docs](https://docs.aleph-alpha.com/docs/introduction/luminous/)
+    description: Luminous Supreme (70B parameters) ([docs](https://docs.aleph-alpha.com/docs/introduction/luminous/))
     creator_organization: Aleph Alpha
     access: limited
     num_parameters: 70000000000
     release_date: 2022-01-01
+  
+  # TODO: Remove Once we have configurable model names
+  - name: neurips/local
+    display_name: Local service
+    description: Local competition service
+    creator_organization: neurips
+    access: open
+    num_parameters: 1
+    release_date: 2021-12-01
+
 
   # Anthropic
   - name: anthropic/stanford-online-all-v4-s3
@@ -275,29 +285,36 @@ models:
     access: open
     num_parameters: 20000000000
     release_date: 2022-02-02
-  - name: together/pythia-3b
-    display_name: Pythia (3B)
-    description: Pythia (3B parameters). The Pythia project combines interpretability analysis and scaling laws to understand how knowledge develops and evolves during training in autoregressive transformers.
+  - name: eleutherai/pythia-1b-v0
+    display_name: Pythia (1B)
+    description: Pythia (1B parameters). The Pythia project combines interpretability analysis and scaling laws to understand how knowledge develops and evolves during training in autoregressive transformers.
+    creator_organization: EleutherAI
+    access: open
+    num_parameters: 805736448
+    release_date: 2023-02-13
+    todo: true
+  - name: eleutherai/pythia-2.8b-v0
+    display_name: Pythia (2.8B)
+    description: Pythia (2.8B parameters). The Pythia project combines interpretability analysis and scaling laws to understand how knowledge develops and evolves during training in autoregressive transformers.
     creator_organization: EleutherAI
     access: open
     num_parameters: 2517652480
     release_date: 2023-02-13
     todo: true
-  - name: together/pythia-7b
-    display_name: Pythia (7B)
-    description: Pythia (7B parameters). The Pythia project combines interpretability analysis and scaling laws to understand how knowledge develops and evolves during training in autoregressive transformers.
+  - name: eleutherai/pythia-6.9b
+    display_name: Pythia (6.9B)
+    description: Pythia (6.9B parameters). The Pythia project combines interpretability analysis and scaling laws to understand how knowledge develops and evolves during training in autoregressive transformers.
     creator_organization: EleutherAI
     access: open
     num_parameters: 6444163072
     release_date: 2023-02-13
-  - name: together/pythia-12b
+  - name: eleutherai/pythia-12b-v0
     display_name: Pythia (12B)
     description: Pythia (12B parameters). The Pythia project combines interpretability analysis and scaling laws to understand how knowledge develops and evolves during training in autoregressive transformers.
     creator_organization: EleutherAI
     access: open
     num_parameters: 11327027200
     release_date: 2023-02-13
-    todo: true
 
   # Google
   - name: together/t5-11b
@@ -338,6 +355,16 @@ models:
     num_parameters: 2700000000
     release_date: 2023-01-23
     todo: true
+
+  # Lightning AI's Lit-GPT
+  - name: lightningai/lit-gpt
+    display_name: Lit-GPT
+    description: Lit-GPT is an optimized collection of open-source LLMs for finetuning and inference. It supports – Falcon, Llama 2, Vicuna, LongChat, and other top-performing open-source large language models.
+    creator_organization: Lightning AI
+    access: open
+    num_parameters: 1
+    release_date: 2023-04-04
+
 
   # Meta
   - name: together/opt-iml-175b
@@ -407,57 +434,66 @@ models:
     num_parameters: 30000000000
     release_date: 2022-11-15
     todo: true
-  - name: huggingface/llama-7b
+  - name: meta/llama-7b
     display_name: LLaMA (7B)
     description: LLaMA is a collection of foundation language models ranging from 7B to 65B parameters.
     creator_organization: Meta
     access: open
     num_parameters: 7000000000
     release_date: 2023-02-24
-
-  # Stanford
-  - name: huggingface/alpaca-7b
-    display_name: Alpaca (7B)
-    description: Alpaca 7B is a model fine-tuned from the LLaMA 7B model on 52K instruction-following demonstrations.
-    creator_organization: Stanford
-    access: open
-    num_parameters: 7000000000
-    release_date: 2023-03-13
-
-  # Meta
-  - name: together/llama-7b
-    display_name: LLaMA (7B)
-    description: LLaMA is a collection of foundation language models ranging from 7B to 65B parameters.
-    creator_organization: Meta
-    access: open
-    num_parameters: 6700000000
-    release_date: 2023-02-24
-  - name: together/llama-13b
+  - name: meta/llama-13b
     display_name: LLaMA (13B)
     description: LLaMA is a collection of foundation language models ranging from 7B to 65B parameters.
     creator_organization: Meta
     access: open
     num_parameters: 13000000000
     release_date: 2023-02-24
-    todo: true
-  - name: together/llama-30b
+  - name: meta/llama-30b
     display_name: LLaMA (30B)
     description: LLaMA is a collection of foundation language models ranging from 7B to 65B parameters.
     creator_organization: Meta
     access: open
     num_parameters: 30000000000
     release_date: 2023-02-24
-    todo: true
-  - name: together/llama-65b
+  - name: meta/llama-65b
     display_name: LLaMA (65B)
     description: LLaMA is a collection of foundation language models ranging from 7B to 65B parameters.
     creator_organization: Meta
     access: open
     num_parameters: 65000000000
     release_date: 2023-02-24
-    todo: true
+  - name: meta/llama-2-7b
+    display_name: Llama 2 (7B)
+    description: Llama 2 pretrained models are trained on 2 trillion tokens, and have double the context length than Llama 1.
+    creator_organization: Meta
+    access: open
+    num_parameters: 7000000000
+    release_date: 2023-07-18
+  - name: meta/llama-2-13b
+    display_name: Llama 2 (13B)
+    description: Llama 2 pretrained models are trained on 2 trillion tokens, and have double the context length than Llama 1.
+    creator_organization: Meta
+    access: open
+    num_parameters: 13000000000
+    release_date: 2023-07-18
+  - name: meta/llama-2-70b
+    display_name: Llama 2 (70B)
+    description: Llama 2 pretrained models are trained on 2 trillion tokens, and have double the context length than Llama 1.
+    creator_organization: Meta
+    access: open
+    num_parameters: 70000000000
+    release_date: 2023-07-18
 
   # Stability AI
+  - name: stabilityai/stablelm-base-alpha-3b
+    display_name: StableLM-Base-Alpha (3B)
+    description: StableLM-Base-Alpha is a suite of 3B and 7B parameter decoder-only language models pre-trained on a diverse collection of English datasets with a sequence length of 4096 to push beyond the context window limitations of existing open-source language models.
+    creator_organization: Stability AI
+    access: open
+    num_parameters: 3000000000
+    release_date: 2023-04-20
+    todo: true
+
   - name: stabilityai/stablelm-base-alpha-7b
     display_name: StableLM-Base-Alpha (7B)
     description: StableLM-Base-Alpha is a suite of 3B and 7B parameter decoder-only language models pre-trained on a diverse collection of English datasets with a sequence length of 4096 to push beyond the context window limitations of existing open-source language models.
@@ -468,38 +504,29 @@ models:
     todo: true
 
   # Stanford
-  - name: together/alpaca-7b
+  - name: stanford/alpaca-7b
     display_name: Alpaca (7B)
     description: Alpaca 7B is a model fine-tuned from the LLaMA 7B model on 52K instruction-following demonstrations
     creator_organization: Stanford
     access: open
     num_parameters: 7000000000
     release_date: 2023-03-13
-  - name: together/alpaca-13b
-    display_name: Alpaca (13B)
-    description: Alpaca 13B is a model fine-tuned from the LLaMA 13B model on 52K instruction-following demonstrations
-    creator_organization: Stanford
-    access: open
-    num_parameters: 7000000000
-    release_date: 2023-03-13
-    todo: true
-  - name: together/alpaca-30b
-    display_name: Alpaca (30B)
-    description: Alpaca 30B is a model fine-tuned from the LLaMA 30B model on 52K instruction-following demonstrations
-    creator_organization: Stanford
-    access: open
-    num_parameters: 30000000000
-    release_date: 2023-03-13
-    todo: true
 
   # LMSYS
-  - name: together/vicuna-13b
-    display_name: Vicuna (13B)
-    description: Vicuna-13B is an open-source chatbot trained by fine-tuning LLaMA on user-shared conversations collected from ShareGPT.
+  - name: lmsys/vicuna-7b-v1.3
+    display_name: Vicuna v1.3 (7B)
+    description: Vicuna v1.3 (7B) is an open-source chatbot trained by fine-tuning LLaMA on user-shared conversations collected from ShareGPT.
+    creator_organization: LMSYS
+    access: open
+    num_parameters: 7000000000
+    release_date: 2023-06-22
+  - name: lmsys/vicuna-13b-v1.3
+    display_name: Vicuna v1.3 (13B)
+    description: Vicuna v1.3 (13B) is an open-source chatbot trained by fine-tuning LLaMA on user-shared conversations collected from ShareGPT.
     creator_organization: LMSYS
     access: open
     num_parameters: 13000000000
-    release_date: 2023-03-30
+    release_date: 2023-06-22
 
   # Microsoft/NVIDIA
   - name: microsoft/TNLGv2_530B
@@ -601,6 +628,18 @@ models:
     creator_organization: OpenAI
     access: limited
     release_date: 2023-03-14
+  - name: openai/gpt-4-0613
+    display_name: gpt-4-0613
+    description: GPT-4 is a large multimodal model (currently only accepting text inputs and emitting text outputs) that is optimized for chat but works well for traditional completions tasks. Snapshot of gpt-4 from 2023-06-13.
+    creator_organization: OpenAI
+    access: limited
+    release_date: 2023-06-13
+  - name: openai/gpt-4-32k-0613
+    display_name: gpt-4-32k-0613
+    description: GPT-4 is a large multimodal model (currently only accepting text inputs and emitting text outputs) that is optimized for chat but works well for traditional completions tasks. Snapshot of gpt-4 with a longer context length of 32,768 tokens from 2023-06-13.
+    creator_organization: OpenAI
+    access: limited
+    release_date: 2023-06-13
   - name: openai/code-davinci-002
     display_name: code-davinci-002
     description: Codex-style model that is designed for pure code-completion tasks ([docs](https://beta.openai.com/docs/models/codex)).
@@ -619,23 +658,22 @@ models:
     access: limited
   - name: openai/gpt-3.5-turbo-0301
     display_name: gpt-3.5-turbo-0301
-    description: Sibling model Sibling model of text-davinci-003 is optimized for chat but works well for traditional completions tasks as well. Snapshot from 2023-03-01.
+    description: Sibling model of text-davinci-003 is optimized for chat but works well for traditional completions tasks as well. Snapshot from 2023-03-01.
     creator_organization: OpenAI
     access: limited
     release_date: 2023-03-01
   - name: openai/gpt-3.5-turbo-0613
     display_name: gpt-3.5-turbo-0613
-    description: Sibling model Sibling model of text-davinci-003 is optimized for chat but works well for traditional completions tasks as well. Snapshot from 2023-06-13.
+    description: Sibling model of text-davinci-003 is optimized for chat but works well for traditional completions tasks as well. Snapshot from 2023-06-13.
     creator_organization: OpenAI
     access: limited
-    release_date: 2023-06-03
-  - name: openai/chat-gpt
-    display_name: ChatGPT
-    description: Sibling model to InstructGPT which interacts in a conversational way. See [OpenAI's announcement](https://openai.com/blog/chatgpt/). The size of the model is unknown.
+    release_date: 2023-06-13
+  - name: openai/gpt-3.5-turbo-16k-0613
+    display_name: gpt-3.5-turbo-16k-0613
+    description: Sibling model of text-davinci-003 is optimized for chat but works well for traditional completions tasks as well. Snapshot from 2023-06-13 with a longer context length of 16,384 tokens.
     creator_organization: OpenAI
     access: limited
-    release_date: 2022-11-30
-    todo: true
+    release_date: 2023-06-13
 
   # Together
   - name: together/Together-gpt-JT-6B-v1
@@ -677,9 +715,17 @@ models:
     num_parameters: 3000000000
     release_date: 2023-05-05
     todo: true
-  - name: together/redpajama-incite-base-7b-v1
-    display_name: RedPajama-INCITE-Base-v1 (7B)
-    description: RedPajama-INCITE-Base-v1 (7B parameters) is a 7 billion base model that aims to replicate the LLaMA recipe as closely as possible.
+  - name: together/redpajama-incite-base-7b
+    display_name: RedPajama-INCITE-Base (7B)
+    description: RedPajama-INCITE-Base (7B parameters) is a 7 billion base model that aims to replicate the LLaMA recipe as closely as possible.
+    creator_organization: Together
+    access: open
+    num_parameters: 7000000000
+    release_date: 2023-05-05
+    todo: true
+  - name: together/redpajama-incite-instruct-7b
+    display_name: RedPajama-INCITE-Instruct (7B)
+    description: RedPajama-INCITE-Instruct (7B parameters) is a model fine-tuned for few-shot applications on the data of GPT-JT. It is built from RedPajama-INCITE-Base (7B), a 7 billion base model that aims to replicate the LLaMA recipe as closely as possible.
     creator_organization: Together
     access: open
     num_parameters: 7000000000
@@ -689,27 +735,78 @@ models:
   # MosaicML
   - name: mosaicml/mpt-7b
     display_name: MPT (7B)
-    description: MPT-7B is a Transformer trained from scratch on 1T tokens of text and code.
+    description: MPT (7B) is a Transformer trained from scratch on 1T tokens of text and code.
     creator_organization: MosaicML
     access: open
     num_parameters: 6700000000
     release_date: 2023-05-05
   - name: mosaicml/mpt-7b-chat
     display_name: MPT-Chat (7B)
-    description: MPT-Chat (7B) is a chatbot-like model for dialogue generation. It is built by finetuning MPT-7B, a Transformer trained from scratch on 1T tokens of text and code.
+    description: MPT-Chat (7B) is a chatbot-like model for dialogue generation. It is built by finetuning MPT (30B) , a Transformer trained from scratch on 1T tokens of text and code.
     creator_organization: MosaicML
     access: open
     num_parameters: 6700000000
     release_date: 2023-05-05
     todo: true
-  - name: mosaicml/mpt-7b-instruct
+  - name: mosaicml/mpt-instruct-7b
     display_name: MPT-Instruct (7B)
-    description: MPT-Instruct (7B) is a model for short-form instruction following. It is built by finetuning MPT (7B), a Transformer trained from scratch on 1T tokens of text and code.
+    description: MPT-Instruct (7B) is a model for short-form instruction following. It is built by finetuning MPT (30B), a Transformer trained from scratch on 1T tokens of text and code.
     creator_organization: MosaicML
     access: open
     num_parameters: 6700000000
     release_date: 2023-05-05
+  - name: mosaicml/mpt-30b
+    display_name: MPT (30B)
+    description: MPT (30B) is a Transformer trained from scratch on 1T tokens of text and code.
+    creator_organization: MosaicML
+    access: open
+    num_parameters: 30000000000
+    release_date: 2023-06-22
+  - name: mosaicml/mpt-30b-chat
+    display_name: MPT-Chat (30B)
+    description: MPT-Chat (30B) is a chatbot-like model for dialogue generation. It is built by finetuning MPT (30B), a Transformer trained from scratch on 1T tokens of text and code.
+    creator_organization: MosaicML
+    access: open
+    num_parameters: 30000000000
+    release_date: 2023-06-22
     todo: true
+  - name: mosaicml/mpt-instruct-30b
+    display_name: MPT-Instruct (30B)
+    description: MPT-Instruct (30B) is a model for short-form instruction following. It is built by finetuning MPT (30B), a Transformer trained from scratch on 1T tokens of text and code.
+    creator_organization: MosaicML
+    access: open
+    num_parameters: 30000000000
+    release_date: 2023-06-22
+
+  # TII UAE
+  - name: tiiuae/falcon-7b
+    display_name: Falcon (7B)
+    description: Falcon-7B is a 7B parameters causal decoder-only model built by TII and trained on 1,500B tokens of RefinedWeb enhanced with curated corpora.
+    creator_organization: TII UAE
+    access: open
+    num_parameters: 7000000000
+    release_date: 2023-03-15
+  - name: tiiuae/falcon-7b-instruct
+    display_name: Falcon-Instruct (7B)
+    description: Falcon-7B-Instruct is a 7B parameters causal decoder-only model built by TII based on Falcon-7B and finetuned on a mixture of chat/instruct datasets.
+    creator_organization: TII UAE
+    access: open
+    num_parameters: 7000000000
+    release_date: 2023-03-15
+  - name: tiiuae/falcon-40b
+    display_name: Falcon (40B)
+    description: Falcon-40B is a 40B parameters causal decoder-only model built by TII and trained on 1,500B tokens of RefinedWeb enhanced with curated corpora.
+    creator_organization: TII UAE
+    access: open
+    num_parameters: 40000000000
+    release_date: 2023-05-25
+  - name: tiiuae/falcon-40b-instruct
+    display_name: Falcon-Instruct (40B)
+    description: Falcon-40B-Instruct is a 40B parameters causal decoder-only model built by TII based on Falcon-7B and finetuned on a mixture of chat/instruct datasets.
+    creator_organization: TII UAE
+    access: open
+    num_parameters: 40000000000
+    release_date: 2023-05-25
 
   # Salesforce
   - name: together/codegen
@@ -758,7 +855,7 @@ models:
     todo: true
   - name: writer/palmyra-instruct-30
     display_name: InstructPalmyra (30B)
-    description: InstructPalmyra (30B)
+    description: InstructPalmyra (30B parameters) is trained using reinforcement learning techniques based on feedback from humans.
     creator_organization: Writer
     access: limited
     num_parameters: 30000000000
@@ -782,7 +879,7 @@ models:
     todo: true
   - name: writer/palmyra-x
     display_name: Palmyra X (43B)
-    description: Palmyra X (43B)
+    description: Palmyra-X (43B parameters) is trained to adhere to instructions using human feedback and utilizes a technique called multiquery attention. Furthermore, a new feature called 'self-instruct' has been introduced, which includes the implementation of an early stopping criteria specifically designed for minimal instruction tuning ([paper](https://dev.writer.com/docs/becoming-self-instruct-introducing-early-stopping-criteria-for-minimal-instruct-tuning)).
     creator_organization: Writer
     access: limited
     num_parameters: 43000000000
@@ -792,7 +889,7 @@ models:
   # Yandex
   - name: together/yalm
     display_name: YaLM (100B)
-    description: YaLM (100B parameters) is an autoregressive language model trained on English and Russian text ([GitHub](From https://github.com/yandex/YaLM-100B)).
+    description: YaLM (100B parameters) is an autoregressive language model trained on English and Russian text ([GitHub](https://github.com/yandex/YaLM-100B)).
     creator_organization: Yandex
     access: open
     num_parameters: 100000000000
@@ -1318,6 +1415,18 @@ metrics:
     description: The accuracy for the 10% of predictions that the model is most confident on (only computed for classification tasks).
     lower_is_better: false
 
+  # CLEVA (Chinese) metrics:
+  # TODO: Fill in display_name, short_display_name, description, lower_is_better fields
+  - name: chinese_ibleu
+  - name: cleva_top1_accuracy
+  - name: bleu
+  - name: chinese_rouge_2
+  - name: chinese_bleu_1
+  - name: chinese_bleu_1
+  - name: chinese_bleu_1
+  - name: cleva_math_result_match
+  # TODO: Add bias metrics
+
 ############################################################
 perturbations:
   - name: robustness
@@ -1551,6 +1660,54 @@ metric_groups:
       - name: classification_macro_f1
         split: ${main_split}
       - name: classification_micro_f1
+        split: ${main_split}
+
+  - name: cleva_paraphrase_generation_metrics
+    display_name: CLEVA (Chinese) paraphrase generation metrics
+    metrics:
+      - name: chinese_ibleu
+        split: ${main_split}
+
+  - name: cleva_conceptual_generalization_metrics
+    display_name: CLEVA (Chinese) conceptual generalization metrics
+    metrics:
+      - name: cleva_top1_accuracy
+        split: ${main_split}
+
+  - name: cleva_translation_metrics
+    display_name: CLEVA (Chinese) translation metrics
+    metrics:
+      - name: bleu
+        split: ${main_split}
+
+  - name: cleva_summarization_metrics
+    display_name: CLEVA (Chinese) summarization metrics
+    metrics:
+      - name: chinese_rouge_2
+        split: ${main_split}
+
+  - name: cleva_pinyin_transliteration_metrics
+    display_name: CLEVA (Chinese) pinyin metrics
+    metrics:
+      - name: chinese_bleu_1
+        split: ${main_split}
+
+  - name: cleva_dialogue_generation_metrics
+    display_name: CLEVA (Chinese) pinyin metrics
+    metrics:
+      - name: chinese_bleu_1
+        split: ${main_split}
+
+  - name: cleva_data_to_text_generation_metrics
+    display_name: CLEVA (Chinese) pinyin metrics
+    metrics:
+      - name: chinese_bleu_1
+        split: ${main_split}
+
+  - name: cleva_mathematical_reasoning_metrics
+    display_name: CLEVA (Chinese) pinyin metrics
+    metrics:
+      - name: cleva_math_result_match
         split: ${main_split}
 
 ############################################################
@@ -1804,6 +1961,44 @@ run_groups:
     description: Evaluating robsustness to a single perturbation at a time (e.g., typos, synonyms)
     category: Targeted evaluations
     visibility: this_group_only
+
+### Chinese
+  - name: chinese_cleva
+    display_name: CLEVA (Chinese) scenarios
+    description: Scenarios for evaluating Chinese language models
+    category: Targeted evaluations
+    subgroups:
+      - cleva_bias
+      - cleva_classical_chinese_understanding
+      - cleva_closed_book_question_answering
+      - cleva_code_synthesis
+      - cleva_commonsense_reasoning
+      - cleva_conceptual_generalization
+      - cleva_copyright
+      - cleva_coreference_resolution
+      - cleva_cultural_knowledge
+      - cleva_data_to_text_generation
+      - cleva_deductive_reasoning
+      - cleva_dialogue_generation
+      - cleva_fact_checking
+      - cleva_inductive_reasoning
+      - cleva_instruction_following
+      - cleva_intent_understanding
+      - cleva_language_modeling
+      - cleva_mathematical_calculation
+      - cleva_mathematical_reasoning
+      - cleva_opinion_mining
+      - cleva_paraphrase_generation
+      - cleva_paraphrase_identification
+      - cleva_pinyin_transliteration
+      - cleva_reading_comprehension
+      - cleva_reasoning_primitive
+      - cleva_sentiment_analysis
+      - cleva_subject_knowledge
+      - cleva_summarization
+      - cleva_text_classification
+      - cleva_toxicity_detection
+      - cleva_translation
 
 ### Scenarios (the actual scenarios)
 
@@ -2758,6 +2953,542 @@ run_groups:
       when: n/a
       language: synthetic
 
+## CLEVA (Chinese) Scenarios
+# TODO: Fill in description and taxonomy
+  - name: cleva_bias
+    display_name: CLEVA (Chinese) bias
+    description: CLEVA (Chinese) bias
+    metric_groups:
+      - accuracy
+      - calibration
+      - general_information
+    environment:
+      main_name: exact_match
+      main_split: test
+    taxonomy:
+      task: "?"
+      what: "?"
+      who: "?"
+      when: "?"
+      language: Chinese
+
+  - name: cleva_classical_chinese_understanding
+    display_name: CLEVA (Chinese) classical Chinese understanding
+    description: CLEVA (Chinese) classical Chinese understanding
+    metric_groups:
+      - accuracy
+      - calibration
+      - general_information
+    environment:
+      main_name: exact_match
+      main_split: test
+    taxonomy:
+      task: "?"
+      what: "?"
+      who: "?"
+      when: "?"
+      language: Chinese
+
+  - name: cleva_closed_book_question_answering
+    display_name: CLEVA (Chinese) closed book question answering
+    description: CLEVA (Chinese) closed book question answering
+    metric_groups:
+      - accuracy
+      - calibration
+      - general_information
+    environment:
+      main_name: exact_match
+      main_split: test
+    taxonomy:
+      task: question answering
+      what: "?"
+      who: "?"
+      when: "?"
+      language: Chinese
+
+  - name: cleva_code_synthesis
+    display_name: CLEVA (Chinese) code synthesis
+    description: CLEVA (Chinese) code synthesis
+    metric_groups:
+      - accuracy
+      - calibration
+      - general_information
+    environment:
+      main_name: exact_match
+      main_split: test
+    taxonomy:
+      task: "?"
+      what: "?"
+      who: "?"
+      when: "?"
+      language: Chinese
+
+  - name: cleva_commonsense_reasoning
+    display_name: CLEVA (Chinese) commonsense reasoning
+    description: CLEVA (Chinese) commonsense reasoning
+    metric_groups:
+      - accuracy
+      - calibration
+      - general_information
+    environment:
+      main_name: exact_match
+      main_split: test
+    taxonomy:
+      task: "?"
+      what: "?"
+      who: "?"
+      when: "?"
+      language: Chinese
+
+  - name: cleva_conceptual_generalization
+    display_name: CLEVA (Chinese) conceptual generalization
+    description: CLEVA (Chinese) conceptual generalization
+    metric_groups:
+      - accuracy
+      - calibration
+      - cleva_conceptual_generalization_metrics
+      - general_information
+    environment:
+      main_name: cleva_top1_accuracy
+      main_split: test
+    taxonomy:
+      task: "?"
+      what: "?"
+      who: "?"
+      when: "?"
+      language: Chinese
+
+  - name: cleva_copyright
+    display_name: CLEVA (Chinese) copyright
+    description: CLEVA (Chinese) copyright
+    metric_groups:
+      - accuracy
+      - calibration
+      - general_information
+    environment:
+      main_split: test
+    taxonomy:
+      task: "?"
+      what: "?"
+      who: "?"
+      when: "?"
+      language: Chinese
+
+  - name: cleva_coreference_resolution
+    display_name: CLEVA (Chinese) coreference resolution
+    description: CLEVA (Chinese) coreference resolution
+    metric_groups:
+      - accuracy
+      - calibration
+      - general_information
+    environment:
+      main_name: exact_match
+      main_split: test
+    taxonomy:
+      task: "?"
+      what: "?"
+      who: "?"
+      when: "?"
+      language: Chinese
+
+  - name: cleva_cultural_knowledge
+    display_name: CLEVA (Chinese) cultural knowledge
+    description: CLEVA (Chinese) cultural knowledge
+    metric_groups:
+      - accuracy
+      - calibration
+      - general_information
+    environment:
+      main_name: exact_match
+      main_split: test
+    taxonomy:
+      task: "?"
+      what: "?"
+      who: "?"
+      when: "?"
+      language: Chinese
+
+  - name: cleva_data_to_text_generation
+    display_name: CLEVA (Chinese) data to text generation
+    description: CLEVA (Chinese) data to text generation
+    metric_groups:
+      - accuracy
+      - calibration
+      - cleva_data_to_text_generation_metrics
+      - general_information
+    environment:
+      main_name: chinese_bleu_1
+      main_split: test
+    taxonomy:
+      task: "?"
+      what: "?"
+      who: "?"
+      when: "?"
+      language: Chinese
+
+  - name: cleva_deductive_reasoning
+    display_name: CLEVA (Chinese) deductive reasoning
+    description: CLEVA (Chinese) deductive reasoning
+    metric_groups:
+      - accuracy
+      - calibration
+      - general_information
+    environment:
+      main_name: exact_match
+      main_split: test
+    taxonomy:
+      task: "?"
+      what: "?"
+      who: "?"
+      when: "?"
+      language: Chinese
+
+  - name: cleva_dialogue_generation
+    display_name: CLEVA (Chinese) dialogue generation
+    description: CLEVA (Chinese) dialogue generation
+    metric_groups:
+      - accuracy
+      - calibration
+      - cleva_dialogue_generation_metrics
+      - general_information
+    environment:
+      main_name: chinese_bleu_1
+      main_split: test
+    taxonomy:
+      task: "?"
+      what: "?"
+      who: "?"
+      when: "?"
+      language: Chinese
+
+  - name: cleva_fact_checking
+    display_name: CLEVA (Chinese) fact checking
+    description: CLEVA (Chinese) fact checking
+    metric_groups:
+      - accuracy
+      - calibration
+      - general_information
+    environment:
+      main_name: exact_match
+      main_split: test
+    taxonomy:
+      task: "?"
+      what: "?"
+      who: "?"
+      when: "?"
+      language: Chinese
+
+  - name: cleva_inductive_reasoning
+    display_name: CLEVA (Chinese) inductive reasoning
+    description: CLEVA (Chinese) inductive reasoning
+    metric_groups:
+      - accuracy
+      - calibration
+      - general_information
+    environment:
+      main_name: exact_match
+      main_split: test
+    taxonomy:
+      task: "?"
+      what: "?"
+      who: "?"
+      when: "?"
+      language: Chinese
+
+  - name: cleva_instruction_following
+    display_name: CLEVA (Chinese) instruction following
+    description: CLEVA (Chinese) instruction following
+    metric_groups:
+      - accuracy
+      - calibration
+      - general_information
+    environment:
+      main_name: exact_match
+      main_split: test
+    taxonomy:
+      task: "?"
+      what: "?"
+      who: "?"
+      when: "?"
+      language: Chinese
+
+  - name: cleva_intent_understanding
+    display_name: CLEVA (Chinese) intent understanding
+    description: CLEVA (Chinese) intent understanding
+    metric_groups:
+      - accuracy
+      - calibration
+      - general_information
+    environment:
+      main_name: exact_match
+      main_split: test
+    taxonomy:
+      task: "?"
+      what: "?"
+      who: "?"
+      when: "?"
+      language: Chinese
+
+  - name: cleva_language_modeling
+    display_name: CLEVA (Chinese) language modeling
+    description: CLEVA (Chinese) language modeling
+    metric_groups:
+      - accuracy
+      - calibration
+      - general_information
+    environment:
+      main_name: bits_per_byte
+      main_split: test
+    taxonomy:
+      task: "?"
+      what: "?"
+      who: "?"
+      when: "?"
+      language: Chinese
+
+  - name: cleva_mathematical_calculation
+    display_name: CLEVA (Chinese) mathematical calculation
+    description: CLEVA (Chinese) mathematical calculation
+    metric_groups:
+      - accuracy
+      - calibration
+      - general_information
+    environment:
+      main_name: exact_match
+      main_split: test
+    taxonomy:
+      task: "?"
+      what: "?"
+      who: "?"
+      when: "?"
+      language: Chinese
+
+  - name: cleva_mathematical_reasoning
+    display_name: CLEVA (Chinese) mathematical reasoning
+    description: CLEVA (Chinese) mathematical reasoning
+    metric_groups:
+      - accuracy
+      - calibration
+      - cleva_mathematical_reasoning_metrics
+      - general_information
+    environment:
+      main_name: cleva_math_result_match
+      main_split: test
+    taxonomy:
+      task: "?"
+      what: "?"
+      who: "?"
+      when: "?"
+      language: Chinese
+
+  - name: cleva_opinion_mining
+    display_name: CLEVA (Chinese) opinion mining
+    description: CLEVA (Chinese) opinion mining
+    metric_groups:
+      - accuracy
+      - calibration
+      - general_information
+    environment:
+      main_name: exact_match
+      main_split: test
+    taxonomy:
+      task: "?"
+      what: "?"
+      who: "?"
+      when: "?"
+      language: Chinese
+
+  - name: cleva_paraphrase_generation
+    display_name: CLEVA (Chinese) paraphrase generation
+    description: CLEVA (Chinese) paraphrase generation
+    metric_groups:
+      - accuracy
+      - calibration
+      - cleva_paraphrase_generation_metrics
+      - general_information
+    environment:
+      main_name: chinese_ibleu
+      main_split: test
+    taxonomy:
+      task: "?"
+      what: "?"
+      who: "?"
+      when: "?"
+      language: Chinese
+
+  - name: cleva_paraphrase_identification
+    display_name: CLEVA (Chinese) paraphrase identification
+    description: CLEVA (Chinese) paraphrase identification
+    metric_groups:
+      - accuracy
+      - calibration
+      - general_information
+    environment:
+      main_name: exact_match
+      main_split: test
+    taxonomy:
+      task: "?"
+      what: "?"
+      who: "?"
+      when: "?"
+      language: Chinese
+
+  - name: cleva_pinyin_transliteration
+    display_name: CLEVA (Chinese) pinyin transliteration
+    description: CLEVA (Chinese) pinyin transliteration
+    metric_groups:
+      - accuracy
+      - calibration
+      - cleva_pinyin_transliteration_metrics
+      - general_information
+    environment:
+      main_name: chinese_bleu_1
+      main_split: test
+    taxonomy:
+      task: "?"
+      what: "?"
+      who: "?"
+      when: "?"
+      language: Chinese
+
+  - name: cleva_reading_comprehension
+    display_name: CLEVA (Chinese) reading comprehension
+    description: CLEVA (Chinese) reading comprehension
+    metric_groups:
+      - accuracy
+      - calibration
+      - general_information
+    environment:
+      main_name: exact_match
+      main_split: test
+    taxonomy:
+      task: "?"
+      what: "?"
+      who: "?"
+      when: "?"
+      language: Chinese
+
+  - name: cleva_reasoning_primitive
+    display_name: CLEVA (Chinese) reasoning primitive
+    description: CLEVA (Chinese) reasoning primitive
+    metric_groups:
+      - accuracy
+      - calibration
+      - general_information
+    environment:
+      main_name: exact_match
+      main_split: test
+    taxonomy:
+      task: "?"
+      what: "?"
+      who: "?"
+      when: "?"
+      language: Chinese
+
+  - name: cleva_sentiment_analysis
+    display_name: CLEVA (Chinese) sentiment analysis
+    description: CLEVA (Chinese) sentiment analysis
+    metric_groups:
+      - accuracy
+      - calibration
+      - general_information
+    environment:
+      main_name: exact_match
+      main_split: test
+    taxonomy:
+      task: "?"
+      what: "?"
+      who: "?"
+      when: "?"
+      language: Chinese
+
+  - name: cleva_subject_knowledge
+    display_name: CLEVA (Chinese) subject knowledge
+    description: CLEVA (Chinese) subject knowledge
+    metric_groups:
+      - accuracy
+      - calibration
+      - general_information
+    environment:
+      main_name: exact_match
+      main_split: test
+    taxonomy:
+      task: "?"
+      what: "?"
+      who: "?"
+      when: "?"
+      language: Chinese
+
+  - name: cleva_summarization
+    display_name: CLEVA (Chinese) summarization
+    description: CLEVA (Chinese) summarization
+    metric_groups:
+      - accuracy
+      - calibration
+      - cleva_summarization_metrics
+      - general_information
+    environment:
+      main_name: chinese_rouge_2
+      main_split: test
+    taxonomy:
+      task: "?"
+      what: "?"
+      who: "?"
+      when: "?"
+      language: Chinese
+
+  - name: cleva_text_classification
+    display_name: CLEVA (Chinese) text classification
+    description: CLEVA (Chinese) text classification
+    metric_groups:
+      - accuracy
+      - calibration
+      - general_information
+    environment:
+      main_name: exact_match
+      main_split: test
+    taxonomy:
+      task: "?"
+      what: "?"
+      who: "?"
+      when: "?"
+      language: Chinese
+
+  - name: cleva_toxicity_detection
+    display_name: CLEVA (Chinese) toxicity detection
+    description: CLEVA (Chinese) toxicity detection
+    metric_groups:
+      - accuracy
+      - calibration
+      - general_information
+    environment:
+      main_name: exact_match
+      main_split: test
+    taxonomy:
+      task: "?"
+      what: "?"
+      who: "?"
+      when: "?"
+      language: Chinese
+
+  - name: cleva_translation
+    display_name: CLEVA (Chinese) translation
+    description: CLEVA (Chinese) translation
+    metric_groups:
+      - accuracy
+      - calibration
+      - cleva_translation_metrics
+      - general_information
+    environment:
+      main_name: bleu
+      main_split: test
+    taxonomy:
+      task: "?"
+      what: "?"
+      who: "?"
+      when: "?"
+      language: Chinese
+
 ## Aspirational scenarios
 # Task coverage
   - name: data_to_text_generation
@@ -2855,13 +3586,6 @@ run_groups:
     todo: true
 
 # Language coverage
-  - name: non_english
-    display_name: Scenarios for languages beyond English.
-    description: Currently, we only implement English scenarios.
-    taxonomy:
-      language: non-English
-    todo: true
-
   - name: user_facing_tasks_english_dialects
     display_name: Scenarios with user-facing tasks on English dialects
     description: Currently, evaluate performance on English dialects via language modeling (e.g., TwitterAAE, ICE), but it would be good to implement user-facing tasks for these dialects.

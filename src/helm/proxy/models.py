@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import List, Dict
+from typing import Dict, List
 
 # Different modalities
 TEXT_MODEL_TAG: str = "text"
@@ -22,9 +22,11 @@ ANTHROPIC_MODEL_TAG: str = "anthropic"
 
 # For OpenAI models with wider contfext windows
 # TODO(#1455): Simplify context window tags.
-WIDER_CONTEXT_WINDOW_TAG: str = "openai_wider_context_window"  # 4000 tokens
-GPT4_CONTEXT_WINDOW_TAG: str = "gpt4_context_window"  # 8192 tokens
-GPT4_32K_CONTEXT_WINDOW_TAG: str = "gpt4_32k_context_window"  # 32768 tokens
+WIDER_CONTEXT_WINDOW_TAG: str = "openai_wider_context_window"  # huggingface/gpt2 tokenizer, 4000 tokens
+GPT_TURBO_CONTEXT_WINDOW_TAG: str = "gpt_turbo_context_window"  # cl100k_base tokenizer, 4000 tokens
+GPT_TURBO_16K_CONTEXT_WINDOW_TAG: str = "gpt_turbo_16k_context_window"  # cl100k_base tokenizer, 8000 tokens
+GPT4_CONTEXT_WINDOW_TAG: str = "gpt4_context_window"  # cl100k_base tokenizer, 8192 tokens
+GPT4_32K_CONTEXT_WINDOW_TAG: str = "gpt4_32k_context_window"  # cl100k_base tokenizer, 32768 tokens
 
 # For AI21 Jurassic-2 models with wider context windows
 AI21_WIDER_CONTEXT_WINDOW_TAG: str = "ai21_wider_context_window"
@@ -110,6 +112,12 @@ class Model:
 # Over time, we should add more information there.
 
 ALL_MODELS = [
+    # Local Model
+    Model(
+        group="neurips",
+        name="neurips/local",
+        tags=[TEXT_MODEL_TAG, FULL_FUNCTIONALITY_TEXT_MODEL_TAG, GPT2_TOKENIZER_TAG],
+    ),
     # AI21: https://studio.ai21.com/pricing
     Model(
         group="jurassic",
@@ -293,111 +301,119 @@ ALL_MODELS = [
     ),
     Model(
         group="together",
-        name="together/pythia-7b",
+        name="eleutherai/pythia-1b-v0",
+        tags=[TEXT_MODEL_TAG, FULL_FUNCTIONALITY_TEXT_MODEL_TAG],
+    ),
+    Model(
+        group="together",
+        name="eleutherai/pythia-2.8b-v0",
+        tags=[TEXT_MODEL_TAG, FULL_FUNCTIONALITY_TEXT_MODEL_TAG],
+    ),
+    Model(
+        group="together",
+        name="eleutherai/pythia-6.9b",
+        tags=[TEXT_MODEL_TAG, FULL_FUNCTIONALITY_TEXT_MODEL_TAG],
+    ),
+    Model(
+        group="together",
+        name="eleutherai/pythia-12b-v0",
         tags=[TEXT_MODEL_TAG, FULL_FUNCTIONALITY_TEXT_MODEL_TAG],
     ),
     # Meta
     Model(
         group="together",
-        name="together/llama-7b",
+        name="meta/llama-7b",
         tags=[TEXT_MODEL_TAG, FULL_FUNCTIONALITY_TEXT_MODEL_TAG],
     ),
     Model(
         group="together",
-        name="together/llama-2-7b-2K",
+        name="meta/llama-13b",
         tags=[TEXT_MODEL_TAG, FULL_FUNCTIONALITY_TEXT_MODEL_TAG],
     ),
     Model(
         group="together",
-        name="together/llama-2-7b",
+        name="meta/llama-30b",
         tags=[TEXT_MODEL_TAG, FULL_FUNCTIONALITY_TEXT_MODEL_TAG],
     ),
     Model(
         group="together",
-        name="together/llama2-7b-32K-2K-2000",
+        name="meta/llama-65b",
+        # TODO(#1828): Upgrade to FULL_FUNCTIONALITY_TEXT_MODEL_TAG
+        tags=[TEXT_MODEL_TAG, LIMITED_FUNCTIONALITY_TEXT_MODEL_TAG],
+    ),
+    Model(
+        group="together",
+        name="meta/llama-2-7b",
         tags=[TEXT_MODEL_TAG, FULL_FUNCTIONALITY_TEXT_MODEL_TAG],
     ),
     Model(
         group="together",
-        name="together/llama2-7b-wo-instruct-32K-2K-2000",
+        name="meta/llama-2-13b",
         tags=[TEXT_MODEL_TAG, FULL_FUNCTIONALITY_TEXT_MODEL_TAG],
     ),
     Model(
         group="together",
-        name="together/llama2-7b-32K-2K-3000",
-        tags=[TEXT_MODEL_TAG, FULL_FUNCTIONALITY_TEXT_MODEL_TAG],
-    ),
-    Model(
-        group="together",
-        name="together/llama2-7b-32K-3000",
-        tags=[TEXT_MODEL_TAG, FULL_FUNCTIONALITY_TEXT_MODEL_TAG],
-    ),
-    Model(
-        group="together",
-        name="together/llama2-7b-32K-2K-4000",
-        tags=[TEXT_MODEL_TAG, FULL_FUNCTIONALITY_TEXT_MODEL_TAG],
-    ),
-    Model(
-        group="together",
-        name="together/llama2-7b-32K-2K-6000",
-        tags=[TEXT_MODEL_TAG, FULL_FUNCTIONALITY_TEXT_MODEL_TAG],
-    ),
-    Model(
-        group="together",
-        name="together/llama2-7B-32K-JT-8K-2000",
-        tags=[TEXT_MODEL_TAG, FULL_FUNCTIONALITY_TEXT_MODEL_TAG],
-    ), #llama2-7B-32K-JT-MQA-2000
-    Model(
-        group="together",
-        name="together/llama2-7B-32K-JT-MQA-2000-fix",
-        tags=[TEXT_MODEL_TAG, FULL_FUNCTIONALITY_TEXT_MODEL_TAG],
-    ),
-    Model(
-        group="together",
-        name="together/llama2-7B-32K-JT-Book-Arxiv-400",
-        tags=[TEXT_MODEL_TAG, FULL_FUNCTIONALITY_TEXT_MODEL_TAG],
-    ),
-    Model(
-        group="together",
-        name="together/llama2-7B-32K-JT-Book-Arxiv-1600",
-        tags=[TEXT_MODEL_TAG, FULL_FUNCTIONALITY_TEXT_MODEL_TAG],
-    ),
-    Model(
-        group="together",
-        name="together/llama2-7B-32K-JT-Book-Arxiv-1600-fix",
-        tags=[TEXT_MODEL_TAG, FULL_FUNCTIONALITY_TEXT_MODEL_TAG],
-    ),
-    Model(
-        group="together",
-        name="together/llama2-7B-32K-JT-Book-Arxiv-2000",
-        tags=[TEXT_MODEL_TAG, FULL_FUNCTIONALITY_TEXT_MODEL_TAG],
-    ),
-    Model(
-        group="together",
-        name="together/llama2-7b-32K-4000",
-        tags=[TEXT_MODEL_TAG, FULL_FUNCTIONALITY_TEXT_MODEL_TAG],
+        name="meta/llama-2-70b",
+        # TODO(#1828): Upgrade to FULL_FUNCTIONALITY_TEXT_MODEL_TAG
+        tags=[TEXT_MODEL_TAG, LIMITED_FUNCTIONALITY_TEXT_MODEL_TAG],
     ),
     # Stanford
     Model(
         group="together",
-        name="together/alpaca-7b",
+        name="stanford/alpaca-7b",
         tags=[TEXT_MODEL_TAG, FULL_FUNCTIONALITY_TEXT_MODEL_TAG, INSTRUCTION_FOLLOWING_MODEL_TAG],
     ),
     # LMSYS
     Model(
         group="together",
-        name="together/vicuna-13b",
+        name="lmsys/vicuna-7b-v1.3",
+        tags=[TEXT_MODEL_TAG, FULL_FUNCTIONALITY_TEXT_MODEL_TAG, INSTRUCTION_FOLLOWING_MODEL_TAG],
+    ),
+    Model(
+        group="together",
+        name="lmsys/vicuna-13b-v1.3",
         tags=[TEXT_MODEL_TAG, FULL_FUNCTIONALITY_TEXT_MODEL_TAG, INSTRUCTION_FOLLOWING_MODEL_TAG],
     ),
     # MosaicML
     Model(
-        group="huggingface",
+        group="together",
         name="mosaicml/mpt-7b",
         tags=[TEXT_MODEL_TAG, FULL_FUNCTIONALITY_TEXT_MODEL_TAG],
     ),
     Model(
-        group="huggingface",
-        name="together/mpt-7b-8k",
+        group="together",
+        name="mosaicml/mpt-instruct-7b",
+        tags=[TEXT_MODEL_TAG, FULL_FUNCTIONALITY_TEXT_MODEL_TAG],
+    ),
+    Model(
+        group="together",
+        name="mosaicml/mpt-30b",
+        tags=[TEXT_MODEL_TAG, FULL_FUNCTIONALITY_TEXT_MODEL_TAG],
+    ),
+    Model(
+        group="together",
+        name="mosaicml/mpt-instruct-30b",
+        tags=[TEXT_MODEL_TAG, FULL_FUNCTIONALITY_TEXT_MODEL_TAG],
+    ),
+    # TII UAE
+    Model(
+        group="together",
+        name="tiiuae/falcon-7b",
+        tags=[TEXT_MODEL_TAG, FULL_FUNCTIONALITY_TEXT_MODEL_TAG],
+    ),
+    Model(
+        group="together",
+        name="tiiuae/falcon-7b-instruct",
+        tags=[TEXT_MODEL_TAG, FULL_FUNCTIONALITY_TEXT_MODEL_TAG],
+    ),
+    Model(
+        group="together",
+        name="tiiuae/falcon-40b",
+        tags=[TEXT_MODEL_TAG, FULL_FUNCTIONALITY_TEXT_MODEL_TAG],
+    ),
+    Model(
+        group="together",
+        name="tiiuae/falcon-40b-instruct",
         tags=[TEXT_MODEL_TAG, FULL_FUNCTIONALITY_TEXT_MODEL_TAG],
     ),
     # GooseAI supported models
@@ -606,9 +622,9 @@ ALL_MODELS = [
         tags=[
             TEXT_MODEL_TAG,
             GPT4_CONTEXT_WINDOW_TAG,
+            GPT4_TOKENIZER_TAG,
             OPENAI_CHATGPT_MODEL_TAG,
             LIMITED_FUNCTIONALITY_TEXT_MODEL_TAG,
-            GPT2_TOKENIZER_TAG,
             INSTRUCTION_FOLLOWING_MODEL_TAG,
         ],
     ),
@@ -618,9 +634,33 @@ ALL_MODELS = [
         tags=[
             TEXT_MODEL_TAG,
             GPT4_32K_CONTEXT_WINDOW_TAG,
+            GPT4_TOKENIZER_TAG,
             OPENAI_CHATGPT_MODEL_TAG,
             LIMITED_FUNCTIONALITY_TEXT_MODEL_TAG,
-            GPT2_TOKENIZER_TAG,
+            INSTRUCTION_FOLLOWING_MODEL_TAG,
+        ],
+    ),
+    Model(
+        group="gpt4",
+        name="openai/gpt-4-0613",
+        tags=[
+            TEXT_MODEL_TAG,
+            GPT4_CONTEXT_WINDOW_TAG,
+            GPT4_TOKENIZER_TAG,
+            OPENAI_CHATGPT_MODEL_TAG,
+            LIMITED_FUNCTIONALITY_TEXT_MODEL_TAG,
+            INSTRUCTION_FOLLOWING_MODEL_TAG,
+        ],
+    ),
+    Model(
+        group="gpt4",
+        name="openai/gpt-4-32k-0613",
+        tags=[
+            TEXT_MODEL_TAG,
+            GPT4_32K_CONTEXT_WINDOW_TAG,
+            GPT4_TOKENIZER_TAG,
+            OPENAI_CHATGPT_MODEL_TAG,
+            LIMITED_FUNCTIONALITY_TEXT_MODEL_TAG,
             INSTRUCTION_FOLLOWING_MODEL_TAG,
         ],
     ),
@@ -634,7 +674,7 @@ ALL_MODELS = [
         # We use a rounded-down sequence length of 4000 to account for these special tokens.
         tags=[
             TEXT_MODEL_TAG,
-            WIDER_CONTEXT_WINDOW_TAG,
+            GPT_TURBO_CONTEXT_WINDOW_TAG,
             GPT4_TOKENIZER_TAG,
             OPENAI_CHATGPT_MODEL_TAG,
             LIMITED_FUNCTIONALITY_TEXT_MODEL_TAG,
@@ -650,7 +690,7 @@ ALL_MODELS = [
         # We use a rounded-down sequence length of 4000 to account for these special tokens.
         tags=[
             TEXT_MODEL_TAG,
-            WIDER_CONTEXT_WINDOW_TAG,
+            GPT_TURBO_CONTEXT_WINDOW_TAG,
             GPT4_TOKENIZER_TAG,
             OPENAI_CHATGPT_MODEL_TAG,
             LIMITED_FUNCTIONALITY_TEXT_MODEL_TAG,
@@ -659,12 +699,14 @@ ALL_MODELS = [
     ),
     Model(
         group="gpt3",
-        name="openai/chat-gpt",
-        # TODO: The max context length is unknown. Assume it's the same length as Davinci Instruct for now.
+        name="openai/gpt-3.5-turbo-16k-0613",
+        # Claimed length is 16,384; we round down to 16,000 for the same reasons as explained
+        # in the openai/gpt-3.5-turbo-0613 comment
         tags=[
             TEXT_MODEL_TAG,
-            WIDER_CONTEXT_WINDOW_TAG,
-            GPT2_TOKENIZER_TAG,
+            GPT_TURBO_16K_CONTEXT_WINDOW_TAG,
+            GPT4_TOKENIZER_TAG,
+            OPENAI_CHATGPT_MODEL_TAG,
             LIMITED_FUNCTIONALITY_TEXT_MODEL_TAG,
             INSTRUCTION_FOLLOWING_MODEL_TAG,
         ],
@@ -688,6 +730,11 @@ ALL_MODELS = [
     Model(
         group="gpt3",
         name="openai/text-similarity-ada-001",
+        tags=[EMBEDDING_MODEL_TAG],
+    ),
+    Model(
+        group="gpt3",
+        name="openai/text-embedding-ada-002",
         tags=[EMBEDDING_MODEL_TAG],
     ),
     # Together
@@ -723,27 +770,12 @@ ALL_MODELS = [
     ),
     Model(
         group="together",
-        name="together/safari-neox-1.5b",
+        name="together/redpajama-incite-base-7b",
         tags=[TEXT_MODEL_TAG, FULL_FUNCTIONALITY_TEXT_MODEL_TAG],
     ),
     Model(
         group="together",
-        name="together/safari-neox-1.5b-90K",
-        tags=[TEXT_MODEL_TAG, FULL_FUNCTIONALITY_TEXT_MODEL_TAG],
-    ),
-    Model(
-        group="together",
-        name="together/safari-neox-1.5b-90K-fix",
-        tags=[TEXT_MODEL_TAG, FULL_FUNCTIONALITY_TEXT_MODEL_TAG],
-    ),
-    Model(
-        group="together",
-        name="together/redpajama-7b-base-v1",
-        tags=[TEXT_MODEL_TAG, FULL_FUNCTIONALITY_TEXT_MODEL_TAG],
-    ),
-    Model(
-        group="together",
-        name="together/redpajama-7b-sandwich-1500",
+        name="together/redpajama-incite-instruct-7b",
         tags=[TEXT_MODEL_TAG, FULL_FUNCTIONALITY_TEXT_MODEL_TAG],
     ),
     # Tsinghua
@@ -836,6 +868,27 @@ ALL_MODELS = [
         group="together",
         name="databricks/dolly-v2-12b",
         tags=[TEXT_MODEL_TAG, FULL_FUNCTIONALITY_TEXT_MODEL_TAG],
+    ),
+    # Stability AI
+    Model(
+        group="together",
+        name="stabilityai/stablelm-base-alpha-3b",
+        tags=[TEXT_MODEL_TAG, FULL_FUNCTIONALITY_TEXT_MODEL_TAG],
+    ),
+    Model(
+        group="together",
+        name="stabilityai/stablelm-base-alpha-7b",
+        tags=[TEXT_MODEL_TAG, FULL_FUNCTIONALITY_TEXT_MODEL_TAG],
+    ),
+    Model(
+        group="lightningai",
+        name="lightningai/lit-gpt",
+        tags=[
+            TEXT_MODEL_TAG,
+            INSTRUCTION_FOLLOWING_MODEL_TAG,
+            LIMITED_FUNCTIONALITY_TEXT_MODEL_TAG,
+            GPT2_TOKENIZER_TAG,
+        ],
     ),
     # For debugging
     Model(

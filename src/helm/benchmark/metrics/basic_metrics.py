@@ -36,6 +36,7 @@ from . import code_metrics_helper
 from .metric import Metric, get_unique_stat_by_name
 from .metric_name import MetricName
 from .metric_service import MetricService
+from .cleva_harms_metrics import ChineseTokenizer
 from .statistic import Stat
 
 
@@ -264,6 +265,31 @@ def bleu_1(gold: str, pred: str) -> float:
     return sentence_bleu([word_tokenize(gold)], word_tokenize(pred), weights=(1, 0, 0, 0))
 
 
+def chinese_bleu_1(gold: str, pred: str) -> float:
+    char_tokenizer = ChineseTokenizer(method="char")
+    return sentence_bleu([char_tokenizer.tokenize(gold)], char_tokenizer.tokenize(pred), weights=(1, 0, 0, 0))
+
+
+def get_chinese_rouge_function(rouge_type: str) -> Callable[[str, str], float]:
+    char_tokenizer = ChineseTokenizer(method="char")
+    scorer = rouge_scorer.RougeScorer([rouge_type], use_stemmer=True, tokenizer=char_tokenizer)
+    return partial(rouge_score, scorer=scorer, rouge_type=rouge_type)
+
+
+def cleva_math_result_match(gold: str, pred: str) -> float:
+    """
+    Exact match that only cares the last math expression.
+    Common math expressions are numbers and fractions.
+    """
+    pattern = r"[-+*/%\.\(\)\d]+"
+    matches = re.findall(pattern, pred)
+    if matches:
+        pred = matches[-1].lstrip(")")
+    # remove space in front or at the end
+    pred = pred.strip()
+    return exact_match(gold, pred)
+
+
 def bleu_4(gold: str, pred: str) -> float:
     return sentence_bleu([word_tokenize(gold)], word_tokenize(pred), weights=(0, 0, 0, 1))
 
@@ -484,6 +510,10 @@ class BasicMetric(Metric):
             "rouge_l": get_rouge_function("rougeL"),
             "bleu_1": bleu_1,
             "bleu_4": bleu_4,
+            "chinese_bleu_1": chinese_bleu_1,
+            "chinese_rouge_1": get_chinese_rouge_function("rouge1"),
+            "chinese_rouge_2": get_chinese_rouge_function("rouge2"),
+            "cleva_math_result_match": cleva_math_result_match,
             "absolute_value_difference": absolute_value_difference,
         }
 
@@ -534,11 +564,15 @@ class BasicMetric(Metric):
         number of generated output tokens.
         For training, we report the estimated total metric tons of CO2 emitted to train the
         model. This is the same for each request."""
-        assert request_state.result is not None
         # Compute efficiency metrics for inference.
-        assert request_state.result.request_time is not None
-        runtime: float = request_state.result.request_time
-        batch_size: int = 1
+        assert request_state.result is not None
+
+        runtime: Optional[float] = None
+        batch_size: Optional[int] = None
+        # Compute efficiency metrics for inference.
+        if request_state.result.request_time is not None:
+            runtime = request_state.result.request_time
+            batch_size = 1
         # For models that perform offline batch inference, effective runtime is batch_request_time, but also
         # record batch_size to provide nuance.
         if request_state.result.batch_request_time is not None and request_state.result.batch_size is not None:
@@ -579,7 +613,7 @@ class BasicMetric(Metric):
         )
         # Denoised runtime for offline models is just runtime.
         # We divide by batch_size to get approximate per-input runtime.
-        if request_state.result.batch_size is not None:
+        if runtime is not None and request_state.result.batch_size is not None:
             denoised_runtime = runtime / request_state.result.batch_size
 
         # Compute efficiency metrics for training.
@@ -599,11 +633,13 @@ class BasicMetric(Metric):
             Stat(MetricName("num_prompt_tokens")).add(num_prompt_tokens),
             Stat(MetricName("num_completion_tokens")).add(num_completion_tokens),
             Stat(MetricName("num_output_tokens")).add(num_output_tokens),
-            Stat(MetricName("inference_runtime")).add(runtime),
-            Stat(MetricName("batch_size")).add(batch_size),
             Stat(MetricName("training_co2_cost")).add(training_co2_cost),
             Stat(MetricName("training_energy_cost")).add(training_energy_cost),
         ]
+        if runtime is not None:
+            stats.append(Stat(MetricName("inference_runtime")).add(runtime))
+        if batch_size is not None:
+            stats.append(Stat(MetricName("batch_size")).add(batch_size))
         if denoised_runtime is not None:
             stats.append(Stat(MetricName("inference_denoised_runtime")).add(denoised_runtime))
         if idealized_runtime is not None:
@@ -820,9 +856,27 @@ class BasicMetric(Metric):
         return derived_stats
 
 
+def _has_non_zero_valued_logprobs(per_instance_stats: Dict[Instance, List[Stat]]) -> bool:
+    """Return whether the per-instance stats contain non-zero-valued logprobs.
+
+    Some models have partial functionality and produce only zero-valued logprobs."""
+    for instance_stats in per_instance_stats.values():
+        for stat in instance_stats:
+            if stat.name.name == "logprob" and stat.sum < 0:
+                return True
+    return False
+
+
 def compute_calibration_metrics(per_instance_stats: Dict[Instance, List[Stat]]) -> List[Stat]:
     max_probs = []
     correct = []
+
+    # If the model does not produce non-zero-valued logprobs
+    # then don't compute calibration metrics.
+    if not _has_non_zero_valued_logprobs(per_instance_stats):
+        hlog("Skipping computing calibration metrics because logprobs were not available.")
+        return []
+
     for instance_stats in per_instance_stats.values():
         max_prob_stat = get_unique_stat_by_name(instance_stats, "max_prob")
         correct_stat = get_unique_stat_by_name(instance_stats, "exact_match")

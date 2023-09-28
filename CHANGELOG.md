@@ -2,12 +2,61 @@
 
 ## [Upcoming]
 
+## [v0.2.4] - 2023-09-20
+
 ### Models
 
-- Added BigCode (#1506)
-- Added GPT-4 (#1457)
+- Added Meta LLaMA, Meta Llama 2, EleutherAI Pythia, Together RedPajama on Together (#1821)
+- Removed the unofficial chat-gpt client in favor of the official API (#1809)
+- Added support for models for the NeurIPS Efficiency Challenge (#1693)
+
+### Frontend
+
+- Added support for rendering train-test overlap stats in the frontend (#1747)
+- Fixed a bug where stats with NaN values would cause the frontend to fail to render tables (#1784)
+
+### Framework
+
+- Moved many dependencies, especially those only used by a single model provider or a small number of runs, to optional extra dependencies (#1798, #1844)
+- Widened some dependencies (e.g. PyTorch) to reduce dependency conflicts with other packages  (#1759)
+- Added `MaxEvalInstancesRunExpander` to allow overriding the number of eval instances at the run level (#1837)
+- Updated human critique evaluation on Amazon Mechanical Turk to support emoji and other special characters (#1773)
+- Fixed a bug where in-context learning examples with multiple correct references were adapted to prompts where all the correct references are concatenated together as the output, which was not intended for some scenarios (e.g. narrative_qa, natural_qa, quac and wikifact) (#1785)
+- Fixed a bug where ObjectSpec is not hashable if any arg is a list (#1771)
+
+### Evaluations
+
+- Added evaluation results for Meta LLaMA, Meta Llama 2, EleutherAI Pythia, Together RedPajama on Together
+- Corrected evaluation results for AI21 Jurassic-2 and Writer Palmyra for the scenarios narrative_qa, natural_qa, quac and wikifact, as they were affected by the bug fixed by #1785
+
+### Contributors
+
+Thank you to the following contributors for your contributions to this HELM release!
+
+- @AndrewJGaut
+- @andyzorigin
+- @bidyapati-p
+- @drisspg
+- @mkly
+- @msaroufim
+- @percyliang
+- @teetone
+- @timothylimyl
+- @unnawut
+- @yifanmai
+
+## [v0.2.3] - 2023-07-25
+
+### Models
+
+- Added BigCode StarCoder (#1506) 
 - Added OPT 1.3B and 6.7B (#1468)
-- Added  OpenAI gpt-3.5-turbo-0613 (#1468)
+- Added OpenAI gpt-3.5-turbo-0613 (#1667), gpt-3.5-turbo-16k-0613, gpt-4-0613, gpt-4-32k-0613 (#1468), gpt-4-32k-0314, gpt-4-32k-0314 (#1457)
+- Added OpenAI text-embedding-ada-002 (#1711)
+- Added Writer Palmyra (#1669,  #1491)
+- Added Anthropic Claude (#1484)
+- Added Databricks Koala on Together (#1701)
+- Added Stability AI StableLM and Together RedPajama on Together
 
 ### Scenarios
 
@@ -15,6 +64,9 @@
 - Fixed corner cases in window service truncation (#1449)
 - Pinned file order for ICE, APPS (code) and ICE scenarios (#1352)
 - Fixed random seed for entity matching scenario (#1475)
+- Added Spider text-to-SQL (#1385)
+- Added Vicuna scenario (#1641), Koala scenario (#1642), open_assistant scenario (#1622), and Anthropic-HH-RLHF scenario (#1643) for instruction-following
+- Added verifiability judgement scenario (#1518)
 
 ### Metrics
 
@@ -23,7 +75,18 @@
 ### Framework
 
 - Added script for estimating the cost of a run suite (#1480)
-- Added support for human critique evaluation using Surge AI (#1330)
+- Added support for human critique evaluation using Surge AI (#1330), Scale AI (#1609), and Amazon Mechanical Turk (#1539)
+- Added support for LLM critique evaluation (#1627)
+- Decreased running time of helm-summarize (#1716)
+- Added `SlurmRunner` for distributing `helm-run` jobs over Slurm (#1550)
+- Migrated to the `setuptools.build_meta` backend (#1535)
+- Stopped non-retriable errors (e.g. content filter errors) from being retried (#1533)
+- Added logging for stack trace and exception message when retries occur (#1555)
+- Added file locking for `ensure_file_downloaded()` (#1692)
+
+## Evaluations
+
+- Added evaluation results for AI21 Jurassic-2 and Writer Palmyra
 
 ## [v0.2.2] - 2023-03-30
 
@@ -114,7 +177,9 @@
 
 - Initial release
 
-[upcoming]: https://github.com/stanford-crfm/helm/compare/v0.2.2...HEAD
+[upcoming]: https://github.com/stanford-crfm/helm/compare/v0.2.4...HEAD
+[v0.2.3]: https://github.com/stanford-crfm/helm/releases/tag/v0.2.4
+[v0.2.3]: https://github.com/stanford-crfm/helm/releases/tag/v0.2.3
 [v0.2.2]: https://github.com/stanford-crfm/helm/releases/tag/v0.2.2
 [v0.2.1]: https://github.com/stanford-crfm/helm/releases/tag/v0.2.1
 [v0.2.0]: https://github.com/stanford-crfm/helm/releases/tag/v0.2.0

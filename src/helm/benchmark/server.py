@@ -1,3 +1,4 @@
+# mypy: check_untyped_defs = False
 """
 Starts a local HTTP server to display benchmarking assets.
 """
@@ -10,6 +11,11 @@ from bottle import Bottle, static_file
 
 
 app = Bottle()
+
+
+@app.get("/benchmark_output/using_release")
+def serve_release():
+    return {"use_release": use_release}
 
 
 @app.get("/benchmark_output/<filename:path>")
@@ -29,12 +35,16 @@ def serve_static(filename="index.html"):
 
 def main():
     global service
+    global use_release
     parser = argparse.ArgumentParser()
     parser.add_argument("-p", "--port", type=int, help="What port to listen on", default=8000)
     parser.add_argument(
         "-o", "--output-path", type=str, help="The location of the output path", default="benchmark_output"
     )
+    parser.add_argument("--use-release", action="store_true", help="Experimental: Serve a release rather than a suite.")
     args = parser.parse_args()
+
+    use_release = args.use_release
 
     # Determine the location of the static directory.
     # This is a hack: it assumes that the static directory has a physical location,
