@@ -183,7 +183,8 @@ class HuggingFaceClient(Client):
             raise ValueError("More than one stop sequence is not supported.")
 
         raw_request = {
-            "engine": request.model_engine,
+            # "engine": request.model_engine,
+            "engine": request.model,
             "prompt": request.prompt,
             "temperature": 1e-7 if request.temperature == 0 else request.temperature,
             "num_return_sequences": request.num_completions,

@@ -66,7 +66,7 @@ class HuggingFaceHubModelConfig:
         - 'gpt2'
         - 'stanford-crfm/BioMedLM'
         - 'stanford-crfm/BioMedLM@main'"""
-        pattern = r"((?P<namespace>[^/@]+)/)?(?P<model_name>[^/@]+)(@(?P<revision>[^/@]+))?"
+        pattern = r"((?P<namespace>[^@]+)/)?(?P<model_name>[^/@]+)(@(?P<revision>[^/@]+))?"
         match = re.fullmatch(pattern, raw)
         if not match:
             raise ValueError(f"Could not parse model name: '{raw}'; Expected format: [namespace/]model_name[@revision]")

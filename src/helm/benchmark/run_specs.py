@@ -57,6 +57,8 @@ from helm.common.general import singleton
 import anthropic
 from helm.proxy.clients.anthropic_client import AnthropicClient
 
+max_train_instances_bias = 5
+
 
 ############################################################
 # Prototypical adapter specs
@@ -73,7 +75,7 @@ def get_multiple_choice_joint_adapter_spec(
     input_noun: Optional[str],
     output_noun: str,
     num_outputs: int = 5,
-    max_train_instances: int = 5,
+    max_train_instances: int = 5 + max_train_instances_bias,
     max_tokens: int = 5,
     sample_train: bool = True,
     **kwargs,
@@ -139,7 +141,7 @@ def get_multiple_choice_adapter_spec(
     instructions: str,
     input_noun: Optional[str],
     output_noun: str,
-    max_train_instances: int = 5,
+    max_train_instances: int = 5 + max_train_instances_bias,
     num_outputs: int = 5,
     max_tokens: int = 1,
     empty_input: bool = False,
@@ -172,7 +174,7 @@ def get_ranking_binary_adapter_spec(
     query_noun: str = "Query",
     output_prefix: str = "Does the passage answer the query?",
     output_noun: str = "Answer",
-    max_train_instances: int = 4,
+    max_train_instances: int = 4 + max_train_instances_bias,
     num_outputs: int = 1,
     num_train_trials: int = 1,
     temperature: float = 0.0,
@@ -265,7 +267,7 @@ def get_generation_adapter_spec(
     newline_after_input_noun: bool = False,
     output_noun: Optional[str] = None,
     newline_after_output_noun: bool = False,
-    max_train_instances: int = 5,
+    max_train_instances: int = 5 + max_train_instances_bias, # TODO: default 5
     num_outputs: int = 1,
     max_tokens: int = 5,
     stop_sequences: Optional[List] = None,  # default value of `stop_sequences` is ["\n"]
@@ -354,7 +356,7 @@ def get_language_modeling_adapter_spec() -> AdapterSpec:
     )
 
 
-def get_summarization_adapter_spec(num_sents: Optional[int], max_train_instances: int = 5, **kwargs) -> AdapterSpec:
+def get_summarization_adapter_spec(num_sents: Optional[int], max_train_instances: int = 5 + max_train_instances_bias, **kwargs) -> AdapterSpec:
     """
     Used for summarization.
     """
@@ -423,7 +425,7 @@ def get_adapter_spec1() -> AdapterSpec:
     return AdapterSpec(
         method=ADAPT_GENERATION,
         instructions="Please solve the following problem.\n",
-        max_train_instances=5,
+        max_train_instances=5 + max_train_instances_bias,
         max_eval_instances=10,
         num_outputs=3,
         num_train_trials=3,

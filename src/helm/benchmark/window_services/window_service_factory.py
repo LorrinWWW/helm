@@ -133,8 +133,19 @@ class WindowServiceFactory:
             # MPT-7B model was trained with the EleutherAI/gpt-neox-20b tokenizer
             # See: https://huggingface.co/mosaicml/mpt-7b
             "mosaicml/mpt-7b",
+            "together/mpt-7b",
+            "together/mpt-7b-8k",
+            "together/mpt-7b-8k-8k",
         ]:
             window_service = GPTNeoXWindowService(service)
+            if model_name == 'together/mpt-7b-8k':
+                window_service.max_sequence_length_ = (8*1024)
+        elif "redpajama" in model_name or "rp" in model_name:
+            window_service = GPTNeoXWindowService(service)
+            #window_service.max_sequence_length_ = (32*1024)
+        elif "safari" in model_name:
+            window_service = GPTNeoXWindowService(service)
+            window_service.max_sequence_length_ = (8*1024)
         elif model_name == "together/h3-2.7b":
             window_service = GPT2WindowService(service)
         elif model_name in [
@@ -162,6 +173,13 @@ class WindowServiceFactory:
             "together/vicuna-13b",
         ]:
             window_service = LlamaWindowService(service)
+        elif 'llama' in model_name:
+            window_service = LlamaWindowService(service)
+            if '-32K-' in model_name:
+                window_service._max_sequence_length = 1024*32
+            if '-2K-' in model_name:
+                window_service._max_sequence_length = 2048
+                
         elif organization == "cohere":
             if "command" in engine:
                 window_service = CohereCommandWindowService(service)

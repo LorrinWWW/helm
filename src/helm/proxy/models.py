@@ -20,7 +20,7 @@ OPENAI_CHATGPT_MODEL_TAG: str = "openai_chatgpt"
 # For Anthropic models
 ANTHROPIC_MODEL_TAG: str = "anthropic"
 
-# For OpenAI models with wider context windows
+# For OpenAI models with wider contfext windows
 # TODO(#1455): Simplify context window tags.
 WIDER_CONTEXT_WINDOW_TAG: str = "openai_wider_context_window"  # 4000 tokens
 GPT4_CONTEXT_WINDOW_TAG: str = "gpt4_context_window"  # 8192 tokens
@@ -302,6 +302,81 @@ ALL_MODELS = [
         name="together/llama-7b",
         tags=[TEXT_MODEL_TAG, FULL_FUNCTIONALITY_TEXT_MODEL_TAG],
     ),
+    Model(
+        group="together",
+        name="together/llama-2-7b-2K",
+        tags=[TEXT_MODEL_TAG, FULL_FUNCTIONALITY_TEXT_MODEL_TAG],
+    ),
+    Model(
+        group="together",
+        name="together/llama-2-7b",
+        tags=[TEXT_MODEL_TAG, FULL_FUNCTIONALITY_TEXT_MODEL_TAG],
+    ),
+    Model(
+        group="together",
+        name="together/llama2-7b-32K-2K-2000",
+        tags=[TEXT_MODEL_TAG, FULL_FUNCTIONALITY_TEXT_MODEL_TAG],
+    ),
+    Model(
+        group="together",
+        name="together/llama2-7b-wo-instruct-32K-2K-2000",
+        tags=[TEXT_MODEL_TAG, FULL_FUNCTIONALITY_TEXT_MODEL_TAG],
+    ),
+    Model(
+        group="together",
+        name="together/llama2-7b-32K-2K-3000",
+        tags=[TEXT_MODEL_TAG, FULL_FUNCTIONALITY_TEXT_MODEL_TAG],
+    ),
+    Model(
+        group="together",
+        name="together/llama2-7b-32K-3000",
+        tags=[TEXT_MODEL_TAG, FULL_FUNCTIONALITY_TEXT_MODEL_TAG],
+    ),
+    Model(
+        group="together",
+        name="together/llama2-7b-32K-2K-4000",
+        tags=[TEXT_MODEL_TAG, FULL_FUNCTIONALITY_TEXT_MODEL_TAG],
+    ),
+    Model(
+        group="together",
+        name="together/llama2-7b-32K-2K-6000",
+        tags=[TEXT_MODEL_TAG, FULL_FUNCTIONALITY_TEXT_MODEL_TAG],
+    ),
+    Model(
+        group="together",
+        name="together/llama2-7B-32K-JT-8K-2000",
+        tags=[TEXT_MODEL_TAG, FULL_FUNCTIONALITY_TEXT_MODEL_TAG],
+    ), #llama2-7B-32K-JT-MQA-2000
+    Model(
+        group="together",
+        name="together/llama2-7B-32K-JT-MQA-2000-fix",
+        tags=[TEXT_MODEL_TAG, FULL_FUNCTIONALITY_TEXT_MODEL_TAG],
+    ),
+    Model(
+        group="together",
+        name="together/llama2-7B-32K-JT-Book-Arxiv-400",
+        tags=[TEXT_MODEL_TAG, FULL_FUNCTIONALITY_TEXT_MODEL_TAG],
+    ),
+    Model(
+        group="together",
+        name="together/llama2-7B-32K-JT-Book-Arxiv-1600",
+        tags=[TEXT_MODEL_TAG, FULL_FUNCTIONALITY_TEXT_MODEL_TAG],
+    ),
+    Model(
+        group="together",
+        name="together/llama2-7B-32K-JT-Book-Arxiv-1600-fix",
+        tags=[TEXT_MODEL_TAG, FULL_FUNCTIONALITY_TEXT_MODEL_TAG],
+    ),
+    Model(
+        group="together",
+        name="together/llama2-7B-32K-JT-Book-Arxiv-2000",
+        tags=[TEXT_MODEL_TAG, FULL_FUNCTIONALITY_TEXT_MODEL_TAG],
+    ),
+    Model(
+        group="together",
+        name="together/llama2-7b-32K-4000",
+        tags=[TEXT_MODEL_TAG, FULL_FUNCTIONALITY_TEXT_MODEL_TAG],
+    ),
     # Stanford
     Model(
         group="together",
@@ -318,6 +393,11 @@ ALL_MODELS = [
     Model(
         group="huggingface",
         name="mosaicml/mpt-7b",
+        tags=[TEXT_MODEL_TAG, FULL_FUNCTIONALITY_TEXT_MODEL_TAG],
+    ),
+    Model(
+        group="huggingface",
+        name="together/mpt-7b-8k",
         tags=[TEXT_MODEL_TAG, FULL_FUNCTIONALITY_TEXT_MODEL_TAG],
     ),
     # GooseAI supported models
@@ -623,7 +703,47 @@ ALL_MODELS = [
     ),
     Model(
         group="together",
+        name="together/compressed-redpajama-2bit",
+        tags=[TEXT_MODEL_TAG, FULL_FUNCTIONALITY_TEXT_MODEL_TAG],
+    ),
+    Model(
+        group="together",
+        name="together/compressed-redpajama-4bit",
+        tags=[TEXT_MODEL_TAG, FULL_FUNCTIONALITY_TEXT_MODEL_TAG],
+    ),
+    Model(
+        group="together",
         name="together/redpajama-incite-base-3b-v1",
+        tags=[TEXT_MODEL_TAG, FULL_FUNCTIONALITY_TEXT_MODEL_TAG],
+    ),
+    Model(
+        group="together",
+        name="together/redpajama-incite-base-7b-v1",
+        tags=[TEXT_MODEL_TAG, FULL_FUNCTIONALITY_TEXT_MODEL_TAG],
+    ),
+    Model(
+        group="together",
+        name="together/safari-neox-1.5b",
+        tags=[TEXT_MODEL_TAG, FULL_FUNCTIONALITY_TEXT_MODEL_TAG],
+    ),
+    Model(
+        group="together",
+        name="together/safari-neox-1.5b-90K",
+        tags=[TEXT_MODEL_TAG, FULL_FUNCTIONALITY_TEXT_MODEL_TAG],
+    ),
+    Model(
+        group="together",
+        name="together/safari-neox-1.5b-90K-fix",
+        tags=[TEXT_MODEL_TAG, FULL_FUNCTIONALITY_TEXT_MODEL_TAG],
+    ),
+    Model(
+        group="together",
+        name="together/redpajama-7b-base-v1",
+        tags=[TEXT_MODEL_TAG, FULL_FUNCTIONALITY_TEXT_MODEL_TAG],
+    ),
+    Model(
+        group="together",
+        name="together/redpajama-7b-sandwich-1500",
         tags=[TEXT_MODEL_TAG, FULL_FUNCTIONALITY_TEXT_MODEL_TAG],
     ),
     # Tsinghua

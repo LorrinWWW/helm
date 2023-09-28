@@ -5,11 +5,12 @@ from .tokenizer_service import TokenizerService
 class GPTNeoXWindowService(LocalWindowService):
     def __init__(self, service: TokenizerService):
         super().__init__(service)
+        self.max_sequence_length_ = 2048
 
     @property
     def max_sequence_length(self) -> int:
         """Return the max sequence length."""
-        return 2048
+        return self.max_sequence_length_
 
     @property
     def max_request_length(self) -> int:
