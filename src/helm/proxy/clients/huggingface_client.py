@@ -1,7 +1,7 @@
 from copy import deepcopy
 import torch
 from dataclasses import asdict
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoModelForCausalLM, AutoTokenizer, AutoConfig
 from typing import Any, Dict, List
 
 from helm.common.cache import Cache, CacheConfig
@@ -22,6 +22,7 @@ from helm.proxy.clients.huggingface_model_registry import (
     HuggingFaceHubModelConfig,
     HuggingFaceLocalModelConfig,
 )
+import threading
 from threading import Lock
 
 
@@ -32,13 +33,44 @@ _KNOWN_MODEL_ALIASES: Dict[str, str] = {
 }
 
 
+def post_processing_text(output_text, stop_tokens, denylist = []):
+
+    filtered_stop_tokens = []
+    for token in stop_tokens:
+        if token != '':
+            filtered_stop_tokens.append(token)
+
+    end_pos = len(output_text)
+    for stop_token in filtered_stop_tokens:
+        if output_text.find(stop_token) != -1:
+            end_pos = min(output_text.find(stop_token), end_pos)
+
+    post_processed_text = output_text[:end_pos]
+    for word in denylist:
+        if post_processed_text.find(word) != -1:
+            print(f"<post_processing_text> post_processed_text: {post_processed_text}")
+            print(f"<post_processing_text> denylist word {word} found, set to empty.")
+            post_processed_text = "Sorry, I'm not sure how to answer that question."
+            break
+    return post_processed_text
+
+
 class HuggingFaceServer:
     def __init__(self, model_config: HuggingFaceModelConfig):
+
+        self.available_gpus = [f"cuda:{i}" for i in range(torch.cuda.device_count())]
+        self.idx_thread_lock = threading.Lock()
+        self.idx_gpu = 0
+        self.gpu_thread_locks = [
+            threading.Lock() for _ in self.available_gpus
+        ]
+        
         if torch.cuda.is_available():
             hlog("CUDA is available, initializing with a GPU...")
             self.device: str = "cuda:0"
         else:
             self.device = "cpu"
+            
         model_kwargs = {}
         # If the HuggingFace model is stored locally, it will have a path defined and we should load it from there.
         # Otherwise, download it from the HuggingFace hub by passing in its identifier.
@@ -52,30 +84,89 @@ class HuggingFaceServer:
             raise Exception(f"Unknown type of model_config: {model_config}")
         with htrack_block(f"Loading Hugging Face model for config {model_config}"):
             # WARNING this may fail if your GPU does not have enough memory
-            self.model = AutoModelForCausalLM.from_pretrained(model_name, trust_remote_code=True, **model_kwargs).to(
-                self.device
-            )
+
+            model_name_map = {
+                'huggingface/mistral-7b-v0.1': '/work/jue_checkpoints/Mistral-7B-v0.1',
+                # 'huggingface/stride-hyena-mistral-7b': 'local_models/StripedHyena-Hessian-Nous-7B',
+                'huggingface/stride-hyena-mistral-nous-7b': 'local_models/StripedHyena-Nous-OpenHermes2_5-7B-run5-step1955',
+                'huggingface/stride-hyena-mistral-jt-7b-800': 'local_models/StripedHyena-Hessian-Nous-JT-7B',
+                'huggingface/stride-hyena-mistral-jt-7b-1200': 'local_models/StripedHyena-Hessian-Nous-JT-7B-1200',
+                'huggingface/stride-hyena-mistral-jt-7b-1600': 'local_models/StripedHyena-Hessian-Nous-JT-7B-1600',
+                'huggingface/stride-hyena-mistral-jt-7b-2000': 'local_models/StripedHyena-Hessian-Nous-JT-7B-2000',
+                'huggingface/stride-hyena-mistral-jt-7b-small-bsz-2000': 'local_models/StripedHyena-Hessian-Nous-JT-7B-small-bsz-2000',
+                'huggingface/stride-hyena-mistral-more-wiki-7b-4000': 'local_models/StripedHyena-Hessian-Nous-Wiki-7B-4000',
+                'huggingface/stride-hyena-mistral-more-ni-7b-400': 'local_models/StripedHyena-Hessian-Nous-more-ni-7B-400',
+                'huggingface/stride-hyena-mistral-kqa-pro-7b-3000': 'local_models/StripedHyena-Hessian-Nous-kqa-pro-7B-3000',
+                'huggingface/stride-hyena-mistral-lc-quad2-7b-3000': 'local_models/StripedHyena-Hessian-Nous-lc-quad2-7B-3000',
+                'huggingface/stride-hyena-mistral-complex-web-questions-7b-3000': 'local_models/StripedHyena-Hessian-Nous-complex-web-questions-7B-3000',
+                'huggingface/stride-hyena-mistral-more-wiki-ni-7b-1200': 'local_models/StripedHyena-Hessian-Nous-more-wiki-ni-7B-1200',
+                'huggingface/stride-hyena-mistral-more-wiki-ni-7b-3000': 'local_models/StripedHyena-Hessian-Nous-more-wiki-ni-7B-3000',
+                'huggingface/stride-hyena-mistral-more-wiki-ni-7b-6000': 'local_models/StripedHyena-Hessian-Nous-more-wiki-ni-7B-6000',
+                'huggingface/stride-hyena-mistral-nq-7b-1000': 'local_models/StripedHyena-Hessian-Nous-nq-7B-1000',
+                'huggingface/stride-hyena-mistral-retrieve-nq-7b-1000': 'local_models/StripedHyena-Hessian-Nous-retrieve-nq-7B-1000',
+                'huggingface/stride-hyena-mistral-context-nq-7b-1000': 'local_models/StripedHyena-Hessian-Nous-context-nq-7B-1000',
+                'huggingface/llama-2-70b': '/work/jue_checkpoints/llama-2-70b',
+                'huggingface/llama-65b': '/work/jue_checkpoints/llama-65b',
+                'huggingface/stride-hyena-mistral-nous-rc1-2000-7b': '/work/jue_checkpoints/StripedHyena-Nous-OpenHermes2_5-7B-rc1-step2000',
+                'huggingface/stride-hyena-mistral-base-7b': '/work/jue_checkpoints/StripedHyena-Hessian-7B',
+            }
+            
+            if '70b' in model_name.lower() or '65b' in model_name.lower():
+                print('large model, use accelerate')
+                from accelerate import init_empty_weights,load_checkpoint_and_dispatch
+                with init_empty_weights():
+                    model_name = model_name_map.get(model_name, model_name)
+                    config = AutoConfig.from_pretrained(model_name)
+                    model = AutoModelForCausalLM.from_config(config, torch_dtype=torch.float16)
+                    model = load_checkpoint_and_dispatch(
+                        model, model_name, device_map="auto", no_split_module_classes=["GPTNeoXLayer", "DecoderLayer", "LlamaDecoderLayer", "MPTBlock", "CodeGenBlock"],
+                    ).eval()
+                    self.model = model
+                    self.models = [model]
+            else:
+                torch.nn.Linear.reset_parameters = lambda x: None
+                model_name = model_name_map.get(model_name, model_name)
+                # model = AutoModelForCausalLM.from_pretrained(model_name, trust_remote_code=True, torch_dtype=torch.bfloat16, **model_kwargs).eval()
+
+                self.models = []
+                for device in self.available_gpus:
+                    torch.cuda.set_device(device)
+                    model = AutoModelForCausalLM.from_pretrained(
+                        model_name, trust_remote_code=True, torch_dtype=torch.bfloat16, **model_kwargs
+                    ).eval().to(device)
+                    self.models.append(model)
+                self.model = self.models[0]
+
+                print(f"{len(self.models)} models have been initialized.")
+                
         with htrack_block(f"Loading Hugging Face tokenizer model for config {model_config}"):
             self.tokenizer = AutoTokenizer.from_pretrained(model_name, **model_kwargs)
 
     def serve_request(self, raw_request: Dict[str, Any]):
+
+        # Select a model for the current thread
+        model = self.model
+        gpu_thread_lock = self.gpu_thread_locks[0]
+        if len(self.models) > 1:
+            model = self.models[self.idx_gpu]
+            gpu_thread_lock = self.gpu_thread_locks[self.idx_gpu]
+            with self.idx_thread_lock:
+                self.idx_gpu += 1
+                if self.idx_gpu >= len(self.models):
+                    self.idx_gpu = 0
+        
         encoded_input = self.tokenizer(raw_request["prompt"], return_tensors="pt", return_token_type_ids=False).to(
-            self.device
+            model.device
         )
         raw_request = deepcopy(raw_request)
-        raw_request["do_sample"] = True
+        if 'do_sample' not in raw_request:
+            raw_request["do_sample"] = True
+        if 'version' in raw_request:
+            raw_request.pop('version')
         raw_request["return_dict_in_generate"] = True
         raw_request["output_scores"] = True
         top_k_per_token: int = raw_request["top_k_per_token"]
         del raw_request["top_k_per_token"]
-        if len(raw_request["stop_sequences"]) > 0:
-            stop_sequence_ids = self.tokenizer(
-                raw_request["stop_sequences"], return_token_type_ids=False, add_special_tokens=False
-            )
-            assert len(stop_sequence_ids.input_ids) == 1, "Total number of stop words should be 1."
-            assert len(stop_sequence_ids.input_ids[0]) == 1, "Total number of tokens in each stop word should be 1."
-            del raw_request["stop_sequences"]
-            raw_request["eos_token_id"] = stop_sequence_ids.input_ids[0][0]
 
         # Strip out irrelevant parameters
         relevant_raw_request = {
@@ -84,34 +175,69 @@ class HuggingFaceServer:
             if key not in ["engine", "prompt", "echo_prompt", "stop_sequences"]
         }
 
-        # Use HuggingFace's `generate` method.
-        output = self.model.generate(**encoded_input, **relevant_raw_request)
-        sequences = output.sequences
-        scores = output.scores
+        # Check if we need to compute the perplexity of the prompt (#1497)
+        compute_logprobs_only = (
+            raw_request["max_new_tokens"] == 0
+            and raw_request["num_return_sequences"] == 1
+            and raw_request["echo_prompt"]
+        )
 
-        # Compute logprobs for each completed sequence.
-        all_logprobs_of_chosen_tokens = []
-        all_top_logprobs_dicts = []
+        # Make sure two threads will not use the same gpu
+        with gpu_thread_lock:
+
+            print(f'Using device {model.device}')
+            
+            # Use HuggingFace's `generate` method.
+            if compute_logprobs_only:
+                with torch.no_grad():
+                    output = model(encoded_input["input_ids"])
+                    sequences = encoded_input["input_ids"]
+                    scores = output.logits
+            else:
+                output = model.generate(**encoded_input, **relevant_raw_request)
+                sequences = output.sequences
+                scores = output.scores
+
+        prompt_tokens_logprobs = []
+        prompt_tokens_top_logprobs_dicts: List[Dict] = []
+        if compute_logprobs_only:
+            # Append the logprob of the first token of the prompt.
+            prompt_tokens_logprobs.append(0.0)
+            prompt_tokens_top_logprobs_dicts.append({})
+
+            # Compute logprobs of prompt tokens.
+            for completion_id in range(raw_request["num_return_sequences"]):
+                for i in range(len(sequences[completion_id]) - 1):
+                    logprobs = torch.nn.functional.log_softmax(scores[completion_id][i].float(), dim=0)
+                    topk_logprobs = torch.topk(logprobs, k=top_k_per_token)
+                    prompt_tokens_top_logprobs_dicts.append(
+                        {
+                            self.tokenizer.convert_ids_to_tokens(k.item()): v.item()
+                            for (k, v) in zip(topk_logprobs.indices, topk_logprobs.values)
+                        }
+                    )
+                    prompt_tokens_logprobs.append(logprobs[sequences[completion_id][i + 1]].item())
+
+        # Compute logprobs of generated tokens for each completed sequence.
+        all_generated_tokens_logprobs = []
+        all_generated_tokens_top_logprobs_dicts = []
         for completion_id in range(raw_request["num_return_sequences"]):
-            logprobs_of_chosen_tokens = []
-            top_logprobs_dicts = []
+            generated_tokens_logprobs = []
+            generated_tokens_top_logprobs_dicts = []
             for i in range(len(sequences[completion_id]) - len(encoded_input.input_ids[0])):
                 logprobs = torch.nn.functional.log_softmax(scores[i][completion_id], dim=0)
-
                 # Get top tokens in terms of log probability.
                 topk_logprobs = torch.topk(logprobs, k=top_k_per_token)
-                top_logprobs_dicts.append(
+                generated_tokens_top_logprobs_dicts.append(
                     {
                         self.tokenizer.convert_ids_to_tokens(k.item()): v.item()
                         for (k, v) in zip(topk_logprobs.indices, topk_logprobs.values)
                     }
                 )
-
-                # Get log probability of chosen token.
                 j = i + len(encoded_input.input_ids[0])
-                logprobs_of_chosen_tokens.append(logprobs[sequences[completion_id][j]].item())
-            all_logprobs_of_chosen_tokens.append(logprobs_of_chosen_tokens)
-            all_top_logprobs_dicts.append(top_logprobs_dicts)
+                generated_tokens_logprobs.append(logprobs[sequences[completion_id][j]].item())
+            all_generated_tokens_logprobs.append(generated_tokens_logprobs)
+            all_generated_tokens_top_logprobs_dicts.append(generated_tokens_top_logprobs_dicts)
 
         # Remove prompt from the start of each sequence if echo_prompt is False.
         if not raw_request["echo_prompt"]:
@@ -120,19 +246,23 @@ class HuggingFaceServer:
         all_tokens = [[self.tokenizer.decode(token) for token in sequence_tokens] for sequence_tokens in sequences]
         all_decoded_text = self.tokenizer.batch_decode(sequences)
 
+        all_decoded_text = [post_processing_text(text, raw_request["stop_sequences"] + ['</s>']) for text in all_decoded_text]
+
         completions = []
-        for decoded_text, tokens, logprobs_of_chosen_tokens, top_logprobs_dicts in zip(
-            all_decoded_text, all_tokens, all_logprobs_of_chosen_tokens, all_top_logprobs_dicts
+        for decoded_text, tokens, generated_tokens_logprobs, generated_tokens_top_logprobs_dicts in zip(
+            all_decoded_text, all_tokens, all_generated_tokens_logprobs, all_generated_tokens_top_logprobs_dicts
         ):
             completions.append(
                 {
                     "text": decoded_text,
                     "tokens": tokens,
-                    "logprobs": logprobs_of_chosen_tokens,
-                    "top_logprobs_dicts": top_logprobs_dicts,
+                    "logprobs": generated_tokens_logprobs,
+                    "top_logprobs_dicts": generated_tokens_top_logprobs_dicts,
+                    "prompt_logprobs": prompt_tokens_logprobs,
+                    "prompt_top_logprobs_dicts": prompt_tokens_top_logprobs_dicts,
                 }
             )
-
+        
         return {"completions": completions, "input_length": len(encoded_input.input_ids[0])}
 
 
@@ -184,14 +314,21 @@ class HuggingFaceClient(Client):
             # "engine": request.model_engine,
             "engine": request.model,
             "prompt": request.prompt,
-            "temperature": 1e-7 if request.temperature == 0 else request.temperature,
+            "temperature": 1 if request.temperature == 0 or request.echo_prompt else request.temperature,
             "num_return_sequences": request.num_completions,
             "max_new_tokens": request.max_tokens,
             "top_p": request.top_p,
             "echo_prompt": request.echo_prompt,
             "top_k_per_token": request.top_k_per_token,
             "stop_sequences": request.stop_sequences,
+            "version": "greedy run 2",
         }
+        if request.temperature == 0 and request.echo_prompt == False:
+            raw_request.pop('temperature')
+            raw_request.pop('top_p')
+            raw_request['do_sample'] = False
+        if request.echo_prompt:
+            raw_request['version'] = "echo fixed"
 
         # Get cached model server instance if possible (to save on model and tokenizer
         # loading times).
@@ -216,8 +353,18 @@ class HuggingFaceClient(Client):
             if request.echo_prompt:
                 # Add prompt to list of generated tokens.
                 generated_tokens = raw_completion["tokens"][response["input_length"] :]
-                for token_text in raw_completion["tokens"][: response["input_length"]]:
-                    tokens.append(Token(text=token_text, logprob=0.0, top_logprobs={}))
+                if raw_completion.get("prompt_logprobs") and raw_completion.get("prompt_top_logprobs_dicts"):
+                    for token_text, logprob, top_logprobs_dict in zip(
+                        raw_completion["tokens"][: response["input_length"]],
+                        raw_completion["prompt_logprobs"][: response["input_length"]],
+                        raw_completion["prompt_top_logprobs_dicts"][: response["input_length"]],
+                    ):
+                        tokens.append(Token(text=token_text, logprob=logprob, top_logprobs=top_logprobs_dict))
+                        sequence_logprob += logprob
+                else:
+                    for token_text in raw_completion["tokens"][: response["input_length"]]:
+                        tokens.append(Token(text=token_text, logprob=0.0, top_logprobs={}))
+
             else:
                 generated_tokens = raw_completion["tokens"]
 
@@ -306,10 +453,12 @@ class HuggingFaceClient(Client):
             def do_it():
                 return {
                     "text": tokenizer.decode(
-                        request.tokens, clean_up_tokenization_spaces=request.clean_up_tokenization_spaces
+                        request.tokens, clean_up_tokenization_spaces=request.clean_up_tokenization_spaces, skip_special_tokens=True,
                     )
                 }
 
+            hlog()
+            
             result, cached = self.cache.get(cache_key, wrap_request_time(do_it))
         except Exception as e:
             error: str = f"HuggingFace error: {e}"
