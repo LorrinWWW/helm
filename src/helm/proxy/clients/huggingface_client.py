@@ -1,7 +1,7 @@
 from copy import deepcopy
 import torch
 from dataclasses import asdict
-from transformers import AutoModelForCausalLM, AutoTokenizer, AutoConfig
+from transformers import AutoModelForCausalLM, AutoTokenizer, AutoConfig, StoppingCriteria, StoppingCriteriaList
 from typing import Any, Dict, List
 
 from helm.common.cache import Cache, CacheConfig
@@ -55,6 +55,20 @@ def post_processing_text(output_text, stop_tokens, denylist = []):
     return post_processed_text
 
 
+class StopWordsCriteria(StoppingCriteria):
+    def __init__(self, stop_words, tokenizer):
+        self.tokenizer = tokenizer
+        self.stop_words = stop_words
+        self._cache_str = ''
+
+    def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs) -> bool:
+        self._cache_str += self.tokenizer.decode(input_ids[0, -1])
+        for stop_words in self.stop_words:
+            if stop_words in self._cache_str:
+                return True
+        return False
+
+
 class HuggingFaceServer:
     def __init__(self, model_config: HuggingFaceModelConfig):
 
@@ -70,6 +84,8 @@ class HuggingFaceServer:
             self.device: str = "cuda:0"
         else:
             self.device = "cpu"
+
+        self.dtype = torch.bfloat16
             
         model_kwargs = {}
         # If the HuggingFace model is stored locally, it will have a path defined and we should load it from there.
@@ -87,7 +103,7 @@ class HuggingFaceServer:
 
             model_name_map = {
                 'huggingface/mistral-7b-v0.1': '/work/jue_checkpoints/Mistral-7B-v0.1',
-                # 'huggingface/stride-hyena-mistral-7b': 'local_models/StripedHyena-Hessian-Nous-7B',
+                'huggingface/mistral-7b-v0.1-fp16': '/work/jue_checkpoints/Mistral-7B-v0.1',
                 'huggingface/stride-hyena-mistral-nous-7b': 'local_models/StripedHyena-Nous-OpenHermes2_5-7B-run5-step1955',
                 'huggingface/stride-hyena-mistral-jt-7b-800': 'local_models/StripedHyena-Hessian-Nous-JT-7B',
                 'huggingface/stride-hyena-mistral-jt-7b-1200': 'local_models/StripedHyena-Hessian-Nous-JT-7B-1200',
@@ -110,16 +126,22 @@ class HuggingFaceServer:
                 'huggingface/stride-hyena-mistral-nous-rc1-2000-7b': '/work/jue_checkpoints/StripedHyena-Nous-OpenHermes2_5-7B-rc1-step2000',
                 'huggingface/stride-hyena-mistral-base-7b': '/work/jue_checkpoints/StripedHyena-Hessian-7B',
             }
+
+            if 'fp16' in model_name.lower():
+                self.dtype = torch.float16
             
             if '70b' in model_name.lower() or '65b' in model_name.lower():
                 print('large model, use accelerate')
                 from accelerate import init_empty_weights,load_checkpoint_and_dispatch
                 with init_empty_weights():
                     model_name = model_name_map.get(model_name, model_name)
-                    config = AutoConfig.from_pretrained(model_name)
-                    model = AutoModelForCausalLM.from_config(config, torch_dtype=torch.float16)
+                    config = AutoConfig.from_pretrained(model_name, trust_remote_code=True)
+                    model = AutoModelForCausalLM.from_config(config, torch_dtype=self.dtype, trust_remote_code=True)
                     model = load_checkpoint_and_dispatch(
-                        model, model_name, device_map="auto", no_split_module_classes=["GPTNeoXLayer", "DecoderLayer", "LlamaDecoderLayer", "MPTBlock", "CodeGenBlock"],
+                        model, model_name, device_map="balanced_low_0", no_split_module_classes=[
+                            "GPTNeoXLayer", "DecoderLayer", "LlamaDecoderLayer", "MPTBlock", "CodeGenBlock",
+                            "AttentionBlock", "ParallelGatedConvBlock",
+                        ],
                     ).eval()
                     self.model = model
                     self.models = [model]
@@ -132,7 +154,7 @@ class HuggingFaceServer:
                 for device in self.available_gpus:
                     torch.cuda.set_device(device)
                     model = AutoModelForCausalLM.from_pretrained(
-                        model_name, trust_remote_code=True, torch_dtype=torch.bfloat16, **model_kwargs
+                        model_name, trust_remote_code=True, torch_dtype=self.dtype, **model_kwargs
                     ).eval().to(device)
                     self.models.append(model)
                 self.model = self.models[0]
@@ -181,6 +203,13 @@ class HuggingFaceServer:
             and raw_request["num_return_sequences"] == 1
             and raw_request["echo_prompt"]
         )
+
+        stop_sequences = raw_request["stop_sequences"] + ['</s>']
+        if len(stop_sequences) > 0:
+            stopping_criteria = StoppingCriteriaList(
+                [StopWordsCriteria(stop_sequences, self.tokenizer)]
+            )
+            relevant_raw_request['stopping_criteria'] = stopping_criteria
 
         # Make sure two threads will not use the same gpu
         with gpu_thread_lock:
@@ -246,7 +275,7 @@ class HuggingFaceServer:
         all_tokens = [[self.tokenizer.decode(token) for token in sequence_tokens] for sequence_tokens in sequences]
         all_decoded_text = self.tokenizer.batch_decode(sequences)
 
-        all_decoded_text = [post_processing_text(text, raw_request["stop_sequences"] + ['</s>']) for text in all_decoded_text]
+        all_decoded_text = [post_processing_text(text, stop_sequences) for text in all_decoded_text]
 
         completions = []
         for decoded_text, tokens, generated_tokens_logprobs, generated_tokens_top_logprobs_dicts in zip(
@@ -321,14 +350,14 @@ class HuggingFaceClient(Client):
             "echo_prompt": request.echo_prompt,
             "top_k_per_token": request.top_k_per_token,
             "stop_sequences": request.stop_sequences,
-            "version": "greedy run 2",
+            "version": "rerun fp16",
         }
         if request.temperature == 0 and request.echo_prompt == False:
             raw_request.pop('temperature')
             raw_request.pop('top_p')
             raw_request['do_sample'] = False
-        if request.echo_prompt:
-            raw_request['version'] = "echo fixed"
+        # if request.echo_prompt:
+        #     raw_request['version'] = "echo fixed"
 
         # Get cached model server instance if possible (to save on model and tokenizer
         # loading times).
