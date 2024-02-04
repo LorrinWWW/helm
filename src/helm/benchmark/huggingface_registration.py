@@ -31,16 +31,25 @@ def register_huggingface_model(
     # If the tokenizer config has a model_max_length of 1000000000000000019884624838656
     # it means that model creator did not specify model_max_length.
     if max_sequence_length > 1_000_000:
-        raise ValueError(
+        # raise ValueError(
+        print(
+            f"Warning: "
             f"Could not infer the model_max_length of Hugging Face model {pretrained_model_name_or_path}, so "
             f"--enable-huggingface-models and --enable-local-huggingface-models cannot be used for this model. "
             f"Please configure the model using prod_env/model_deployments.yaml instead."
         )
+        tokenizer.model_max_length = 4096
+        max_sequence_length = 4096
+
+    if os.environ.get('HELM_CLIENT_TYPE', 'default') == 'pulsar':
+        client_class_name = "helm.proxy.clients.pulsar_client.PulsarClient"
+    else:
+        client_class_name = "helm.proxy.clients.huggingface_client.HuggingFaceClient"
 
     model_deployment = ModelDeployment(
         name=helm_model_name,
         client_spec=ClientSpec(
-            class_name="helm.proxy.clients.huggingface_client.HuggingFaceClient",
+            class_name=client_class_name,
             args=object_spec_args,
         ),
         model_name=helm_model_name,

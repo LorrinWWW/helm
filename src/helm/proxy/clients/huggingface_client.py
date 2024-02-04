@@ -22,6 +22,28 @@ from helm.proxy.tokenizers.huggingface_tokenizer import HuggingFaceTokenizer, Wr
 from threading import Lock
 
 
+def post_processing_text(output_text, stop_tokens, denylist = []):
+
+    filtered_stop_tokens = []
+    for token in stop_tokens:
+        if token != '':
+            filtered_stop_tokens.append(token)
+
+    end_pos = len(output_text)
+    for stop_token in filtered_stop_tokens:
+        if output_text.find(stop_token) != -1:
+            end_pos = min(output_text.find(stop_token), end_pos)
+
+    post_processed_text = output_text[:end_pos]
+    for word in denylist:
+        if post_processed_text.find(word) != -1:
+            print(f"<post_processing_text> post_processed_text: {post_processed_text}")
+            print(f"<post_processing_text> denylist word {word} found, set to empty.")
+            post_processed_text = "Sorry, I'm not sure how to answer that question."
+            break
+    return post_processed_text
+
+
 class StopAtSpecificTokenCriteria(StoppingCriteria):
     def __init__(self, stop_sequence: List[int]):
         super().__init__()
@@ -62,7 +84,7 @@ class HuggingFaceServer:
         with htrack_block(f"Loading Hugging Face model {pretrained_model_name_or_path}"):
             # WARNING this may fail if your GPU does not have enough memory
             self.model = AutoModelForCausalLM.from_pretrained(
-                pretrained_model_name_or_path, trust_remote_code=True, **kwargs
+                pretrained_model_name_or_path, trust_remote_code=True, torch_dtype=torch.float16, **kwargs
             ).to(self.device)
         with htrack_block(f"Loading Hugging Face tokenizer for model {pretrained_model_name_or_path}"):
             self.wrapped_tokenizer: WrappedPreTrainedTokenizer = HuggingFaceTokenizer.create_tokenizer(
@@ -103,6 +125,7 @@ class HuggingFaceServer:
             sequences = encoded_input["input_ids"]
             scores = output.logits
         else:
+            do_sample = (raw_request["temperature"] > 0.001)
             output = self.model.generate(
                 **encoded_input,
                 temperature=raw_request["temperature"],
@@ -169,6 +192,19 @@ class HuggingFaceServer:
         with self.wrapped_tokenizer as tokenizer:
             all_tokens = [[tokenizer.decode(token) for token in sequence_tokens] for sequence_tokens in sequences]
             all_decoded_text = tokenizer.batch_decode(sequences)
+
+        # post-process
+        with self.wrapped_tokenizer as tokenizer:
+            if raw_request["stop_sequences"] is None:
+                stop_sequences = [tokenizer.eos_token]
+            else:
+                stop_sequences = raw_request["stop_sequences"] + [tokenizer.eos_token]
+            all_decoded_text = [
+                post_processing_text(decoded_text, stop_sequences) for decoded_text in all_decoded_text
+            ]
+
+        # print('in:', raw_request["prompt"])
+        # print('out:', all_decoded_text[0])
 
         completions = []
         for decoded_text, tokens, generated_tokens_logprobs, generated_tokens_top_logprobs_dicts in zip(
