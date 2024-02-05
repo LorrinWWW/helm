@@ -1,5 +1,8 @@
 
 export MODEL_NAME=local_models/Mistral-7B-Instruct-v0.1
+export PULSAR_VERSION=1.0
+export PULSAR_MODEL_NAME="${MODEL_NAME}_${PULSAR_VERSION}"
+
 export BOS_TOKEN="<s>"
 export INSTANCES=10
 
