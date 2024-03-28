@@ -125,14 +125,18 @@ class HuggingFaceServer:
             sequences = encoded_input["input_ids"]
             scores = output.logits
         else:
-            do_sample = (raw_request["temperature"] > 0.001)
+            if raw_request["temperature"] > 0.001:
+                do_sample = True
+            else:
+                do_sample = False
+                raw_request["temperature"] = 1.0
             output = self.model.generate(
                 **encoded_input,
                 temperature=raw_request["temperature"],
                 num_return_sequences=raw_request["num_return_sequences"],
                 max_new_tokens=raw_request["max_new_tokens"],
                 top_p=raw_request["top_p"],
-                do_sample=True,
+                do_sample=do_sample,
                 return_dict_in_generate=True,
                 output_scores=True,
                 **optional_args,
