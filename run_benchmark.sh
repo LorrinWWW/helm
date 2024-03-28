@@ -9,7 +9,7 @@ trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT
 
 sed "s#<<MODEL_NAME>>#${MODEL_NAME}#g" src/helm/benchmark/presentation/run_specs_lite_core_p1p2.conf > src/helm/benchmark/presentation/run_specs_lite_core_p1p2_tmp.conf
 
-HELM_CLIENT_TYPE=hf helm-run \
+HELM_CLIENT_TYPE=hf helm-run -n 1 \
     -c src/helm/benchmark/presentation/run_specs_lite_core_p1p2_tmp.conf \
     --enable-huggingface-models $MODEL_NAME \
     --suite hf_v1 \
