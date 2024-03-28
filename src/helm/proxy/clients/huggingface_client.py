@@ -84,8 +84,8 @@ class HuggingFaceServer:
         with htrack_block(f"Loading Hugging Face model {pretrained_model_name_or_path}"):
             # WARNING this may fail if your GPU does not have enough memory
             self.model = AutoModelForCausalLM.from_pretrained(
-                pretrained_model_name_or_path, trust_remote_code=True, torch_dtype=torch.float16, **kwargs
-            ).to(self.device)
+                pretrained_model_name_or_path, trust_remote_code=True, torch_dtype=torch.float16, device_map='auto', **kwargs
+            )
         with htrack_block(f"Loading Hugging Face tokenizer for model {pretrained_model_name_or_path}"):
             self.wrapped_tokenizer: WrappedPreTrainedTokenizer = HuggingFaceTokenizer.create_tokenizer(
                 pretrained_model_name_or_path, **kwargs
@@ -130,6 +130,7 @@ class HuggingFaceServer:
             else:
                 do_sample = False
                 raw_request["temperature"] = 1.0
+
             output = self.model.generate(
                 **encoded_input,
                 temperature=raw_request["temperature"],
