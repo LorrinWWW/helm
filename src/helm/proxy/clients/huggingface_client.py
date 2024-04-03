@@ -1,6 +1,7 @@
 from copy import deepcopy
 import torch
 from transformers import AutoModelForCausalLM
+from transformers import AutoTokenizer
 from transformers.generation.stopping_criteria import (
     StoppingCriteria,
     StoppingCriteriaList,
@@ -20,6 +21,8 @@ from helm.common.request import (
 from .client import CachingClient, truncate_sequence
 from helm.proxy.tokenizers.huggingface_tokenizer import HuggingFaceTokenizer, WrappedPreTrainedTokenizer, resolve_alias
 from threading import Lock
+import os
+os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
 
 
 def post_processing_text(output_text, stop_tokens, denylist = []):
@@ -71,6 +74,22 @@ class HuggingFaceRequest(TypedDict):
     top_k_per_token: int
     stop_sequences: List
 
+from datasets import load_dataset
+from quanto import Calibration, freeze, qfloat8, qint4, qint8, quantize
+@torch.no_grad()
+def calibrate_func(model, tokenizer, batch_size, batches):
+    samples = batch_size * batches
+    cal_dataset = load_dataset("lambada", split=["validation"])[0]
+    model.eval()
+    total = 0
+    for batch in cal_dataset.iter(batch_size=batch_size):
+        inputs = tokenizer(batch["text"], return_tensors="pt", padding=True)
+        input_ids = inputs.input_ids.to(model.device)
+        attention_mask = inputs.attention_mask.to(model.device)
+        model(input_ids, attention_mask=attention_mask)
+        total += input_ids.size(0)
+        if total >= samples:
+            break
 
 class HuggingFaceServer:
     """A thin wrapper around a Hugging Face AutoModelForCausalLM for HuggingFaceClient to call."""
@@ -87,9 +106,24 @@ class HuggingFaceServer:
                 pretrained_model_name_or_path, trust_remote_code=True, torch_dtype=torch.float16, device_map='auto', **kwargs
             )
         with htrack_block(f"Loading Hugging Face tokenizer for model {pretrained_model_name_or_path}"):
-            self.wrapped_tokenizer: WrappedPreTrainedTokenizer = HuggingFaceTokenizer.create_tokenizer(
-                pretrained_model_name_or_path, **kwargs
-            )
+            self.wrapped_tokenizer: WrappedPreTrainedTokenizer  = HuggingFaceTokenizer.create_tokenizer(pretrained_model_name_or_path, **kwargs)
+        #quantize(self.model, weights=qfloat8)
+        quantize(self.model, weights=qfloat8, activations=qfloat8)
+        tokenizer = AutoTokenizer.from_pretrained('mistralai/Mistral-7B-Instruct-v0.1')
+        tokenizer.pad_token_id = tokenizer.eos_token_id
+        tokenizer.padding_side = "left"
+        batch_size = 32
+        batches = 4
+        # samples = load_dataset("wikitext", "wikitext-2-raw-v1", split="train[:batch_size*batches]")
+        # text_data = samples['text']
+        # input_ids = tokenizer(text_data, return_tensors='pt', padding=True, truncation=True).input_ids.to(self.device)
+        torch.backends.cudnn.enable = True
+        torch.backends.cudnn.benchmark = True
+        with Calibration(momentum=0.9):
+            calibrate_func(self.model, tokenizer, batch_size, batches)
+        freeze(self.model)
+
+
 
     def serve_request(self, raw_request: HuggingFaceRequest):
         with self.wrapped_tokenizer as tokenizer:
