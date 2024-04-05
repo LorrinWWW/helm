@@ -1,0 +1,50 @@
+version: '0.1'
+
+services:
+
+  pulsar:
+    image: "${PULSAR_IMG_NAME}"
+    environment:
+      NAME: 'pulsar-engine'
+    shm_size: '1gb'
+    deploy:
+      resources:
+        reservations:
+          devices:
+          - driver: nvidia
+            device_ids: ['0', '1', '2', '3', '4', '5', '6', '7']
+            capabilities: [gpu]
+    ports:
+      - '8080:80'
+    volumes:
+      - "${PULSAR_MODEL_DIR}:/data"
+    command:
+      - "--model-id=${PULSAR_MODEL_ID}"
+      - "--lookahead=4"
+      - "--max-total-tokens=8193"
+      - "--max-input-length=8192"
+      - "--max-batch-prefill-tokens=8192"
+      - "--validation-workers=4"
+      - "--dtype=float16"
+      - "--waiting-served-ratio=0.1"
+      - "--max-best-of=1"
+      - "--no-special-tokens"
+
+  helm:
+    image: "${HELM_IMG_NAME}"
+    environment:
+      PULSAR_URL: "http://pulsar"
+      PULSAR_PORT: 80
+      HELM_MODEL_NAME: "${HELM_MODEL_NAME}"
+    shm_size: '1gb'
+    deploy:
+      resources:
+        reservations:
+          devices:
+          - driver: nvidia
+            device_ids: ['0', '1', '2', '3', '4', '5', '6', '7']
+            capabilities: [gpu]
+    volumes:
+      - "${HELM_PATH}:/workspace/helm"
+    working_dir: "/workspace/helm"
+    command: "bash run_benchmark_pulsar.sh"

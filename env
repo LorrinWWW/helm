@@ -1,0 +1,7 @@
+HELM_IMG_NAME=lorrin/helm:latest
+HELM_PATH=/home/jue@together.xyz/helm-pulsar
+HELM_MODEL_NAME=mistralai/Mixtral-8x7B-Instruct-v0.1
+
+PULSAR_IMG_NAME=lorrin/pulsar:dev
+PULSAR_MODEL_DIR=/work/jue_checkpoints
+PULSAR_MODEL_ID=/data/Mixtral-8x7B-Instruct-v0.1
