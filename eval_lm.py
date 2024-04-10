@@ -8,12 +8,11 @@ import tqdm
 from fire import Fire
 import sys
 from quanto import Calibration, freeze, qfloat8, qint4, qint8, quantize
-from helm.common.hierarchical_logger import htrack_block, hlog
 
 @torch.no_grad()
 def calibrate_func(model, tokenizer, batch_size, batches):
     samples = batch_size * batches
-    cal_dataset = load_dataset("lambada", split=["validation"])[0]
+    cal_dataset = load_dataset("Jackmin108/c4-en-validation", split=["validation"])[0]
     model.eval()
     total = 0
     for batch in cal_dataset.iter(batch_size=batch_size):
@@ -29,6 +28,7 @@ def calibrate_func(model, tokenizer, batch_size, batches):
 def evaluate(
     model_id: str,
     data_name: str,
+    quant_param: str,
     seq_length: int = 4096,
     num_seqs: int = 256,
 ):
@@ -57,23 +57,25 @@ def evaluate(
         append_concat_token=False, 
         add_special_tokens=False
     )
-    with htrack_block(f"Loading Hugging Face model {model_id}"):
         # WARNING this may fail if your GPU does not have enough memory
-        model = AutoModelForCausalLM.from_pretrained(
-            model_id, trust_remote_code=True, torch_dtype=torch.float16, device_map='auto'
-        )
-    
-    quantize(model, weights=qfloat8, activations=qfloat8)
-    tokenizer.pad_token_id = tokenizer.eos_token_id
-    tokenizer.padding_side = "left"
-    batch_size = 32
-    batches = 4
-    torch.backends.cudnn.enable = True
-    torch.backends.cudnn.benchmark = True
-    with Calibration(momentum=0.8):
-        calibrate_func(model, tokenizer, batch_size, batches)
-    freeze(model)
-    
+    model = AutoModelForCausalLM.from_pretrained(
+            model_id, trust_remote_code=True, torch_dtype=torch.float16, device_map='auto')
+    if quant_param == 'weight':
+        quantize(model, weights=qfloat8)
+        freeze(model)
+        print('weight quantization done')
+    if quant_param == 'activation':
+        quantize(model, weights=qfloat8, activations=qfloat8)
+        tokenizer.pad_token_id = tokenizer.eos_token_id
+        tokenizer.padding_side = "left"
+        batch_size = 32
+        batches = 4
+        torch.backends.cudnn.enable = True
+        torch.backends.cudnn.benchmark = True
+        with Calibration(momentum=0.8):
+            calibrate_func(model, tokenizer, batch_size, batches)
+        freeze(model) 
+        print('activation quantization done')
     losses = []
     
     for i, item in enumerate(tqdm.tqdm(data, total=num_seqs)):
@@ -97,5 +99,6 @@ def evaluate(
 if __name__ == '__main__':
     model_id = sys.argv[1]
     data_name = sys.argv[2]
-    evaluate(model_id, data_name)
+    quant_param = sys.argv[3]
+    evaluate(model_id, data_name, quant_param)
     
