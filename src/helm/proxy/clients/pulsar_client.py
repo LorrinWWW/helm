@@ -49,7 +49,7 @@ class PulsarClient(CachingClient):
 
     PULSAR_URL: str = os.environ.get('PULSAR_URL', "http://localhost")
     PULSAR_PORT: str = os.environ.get('PULSAR_PORT', "8080")
-    INFERENCE_ENDPOINT: str = f"{PULSAR_URL}:{PULSAR_PORT}"
+    INFERENCE_ENDPOINT: str = f"{PULSAR_URL}:{PULSAR_PORT}/generate"
     RETRIEVE_JOB_MAX_WAIT_SECONDS: int = 60
 
     def convert_to_raw_request(self, request: Request) -> Dict:
@@ -85,8 +85,6 @@ class PulsarClient(CachingClient):
         def do_it_sync() -> Dict[Any, Any]:
 
             response = requests.post(PulsarClient.INFERENCE_ENDPOINT, json=raw_request)
-
-            # print(raw_request)
             
             try:
                 response.raise_for_status()
@@ -99,21 +97,22 @@ class PulsarClient(CachingClient):
                 error_message = result["error"]
                 raise PulsarClientError(f"Pulsar request failed with error: {error_message}")
 
-            text = result[0]['generated_text']
+            text = result['generated_text']
 
             if raw_request["parameters"]["stop"] is not None:
                 text = post_processing_text(text, raw_request["parameters"]["stop"])
 
-            # print('in:', raw_request['inputs'])
-            # print('out:', text)
+            # print("[[parameters]]", raw_request['parameters'])
+            # print('[[in]]:', raw_request['inputs'])
+            # print('[[out]]:', text)
             
             return {'choices': [
                 {
                     'finish_reason': 'length',
                     'text': text,
-                    'tokens': [token['text'] for token in result[0]['details']['tokens']]        
+                    'tokens': [token['text'] for token in result['details']['tokens']]        
                 }],
-                'details': result[0]['details'],
+                'details': result['details'],
                 'request_id': '0'
             }
                 
