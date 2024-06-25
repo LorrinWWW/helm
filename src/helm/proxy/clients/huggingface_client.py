@@ -108,7 +108,7 @@ class HuggingFaceServer:
             self.wrapped_tokenizer: WrappedPreTrainedTokenizer  = HuggingFaceTokenizer.create_tokenizer(pretrained_model_name_or_path, **kwargs)
         #quantize(self.model, weights=qfloat8)
         quantize(self.model, weights=qfloat8, activations=qfloat8)
-        tokenizer = AutoTokenizer.from_pretrained('mistralai/Mistral-7B-Instruct-v0.1')
+        tokenizer = AutoTokenizer.from_pretrained(pretrained_model_name_or_path)
         tokenizer.pad_token_id = tokenizer.eos_token_id
         tokenizer.padding_side = "left"
         batch_size = 32

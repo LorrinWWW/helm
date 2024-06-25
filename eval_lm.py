@@ -8,11 +8,14 @@ import tqdm
 from fire import Fire
 import sys
 from quanto import Calibration, freeze, qfloat8, qint4, qint8, quantize
+import os
+
 
 @torch.no_grad()
 def calibrate_func(model, tokenizer, batch_size, batches):
     samples = batch_size * batches
-    cal_dataset = load_dataset("Jackmin108/c4-en-validation", split=["validation"])[0]
+    #cal_dataset = load_dataset("Jackmin108/c4-en-validation", split=["validation"])[0]
+    cal_dataset = load_dataset("lambada", split=["validation"])[0]
     model.eval()
     total = 0
     for batch in cal_dataset.iter(batch_size=batch_size):
@@ -32,7 +35,8 @@ def evaluate(
     seq_length: int = 4096,
     num_seqs: int = 256,
 ):
-
+    # HF_token = "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"
+    # os.environ["HUGGINGFACE_TOKEN"] = HF_token
     if data_name == 'c4':
 
         data = load_dataset('Jackmin108/c4-en-validation', split='validation')
@@ -59,7 +63,8 @@ def evaluate(
     )
         # WARNING this may fail if your GPU does not have enough memory
     model = AutoModelForCausalLM.from_pretrained(
-            model_id, trust_remote_code=True, torch_dtype=torch.float16, device_map='auto')
+            model_id, trust_remote_code=True, torch_dtype=torch.float16, device_map='auto'
+        )
     if quant_param == 'weight':
         quantize(model, weights=qfloat8)
         freeze(model)
@@ -77,7 +82,7 @@ def evaluate(
         freeze(model) 
         print('activation quantization done')
     losses = []
-    
+    print('evaluating ...')
     for i, item in enumerate(tqdm.tqdm(data, total=num_seqs)):
     
         if i >= num_seqs:

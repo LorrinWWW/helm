@@ -1,12 +1,13 @@
 #export MODEL_NAME=mistralai/Mistral-7B-Instruct-v0.1
-export MODEL_NAME=mistralai/Mixtral-8x7B-v0.1
+#export MODEL_NAME=mistralai/Mixtral-8x7B-v0.1
+export MODEL_NAME=EleutherAI/pythia-160m
 
 export PULSAR_VERSION=1.0
 export PULSAR_MODEL_NAME="${MODEL_NAME}_${PULSAR_VERSION}"
 
 export BOS_TOKEN="<s>"
-export INSTANCES=1000
-export TRIALS=3
+export INSTANCES=100
+export TRIALS=1
 export SUITE_NAME="hf_v1"
 
 trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT
