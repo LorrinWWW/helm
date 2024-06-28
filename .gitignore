@@ -8,6 +8,7 @@ pip-wheel-metadata/
 build
 prod_env
 benchmark_output
+models--meta-llama--Meta-Llama-3-8B-Instruct/
 www
 proxy_api_key*.txt
 microsoft_client.lock
