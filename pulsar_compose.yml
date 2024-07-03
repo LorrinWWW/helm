@@ -6,18 +6,17 @@ services:
     image: "${PULSAR_IMG_NAME}"
     environment:
       NAME: 'pulsar-engine'
+      HUGGING_FACE_HUB_TOKEN: "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"
     shm_size: '1gb'
     deploy:
       resources:
         reservations:
           devices:
           - driver: nvidia
-            device_ids: ['0', '1', '2', '3', '4', '5', '6', '7']
+            device_ids: ['0', '1', '2', '3']
             capabilities: [gpu]
-    ports:
-      - '8080:80'
     volumes:
-      - "${PULSAR_MODEL_DIR}:/data"
+      - "${PULSAR_MODEL_DIR}:/local_model"
     command:
       - "--model-id=${PULSAR_MODEL_ID}"
       - "--lookahead=4"
@@ -25,7 +24,7 @@ services:
       - "--max-input-length=8192"
       - "--max-batch-prefill-tokens=8192"
       - "--validation-workers=4"
-      - "--dtype=float16"
+      - "--dtype=bfloat16"
       - "--waiting-served-ratio=0.1"
       - "--max-best-of=1"
       - "--no-special-tokens"
@@ -36,6 +35,7 @@ services:
       PULSAR_URL: "http://pulsar"
       PULSAR_PORT: 80
       HELM_MODEL_NAME: "${HELM_MODEL_NAME}"
+      HUGGING_FACE_HUB_TOKEN: "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"
     shm_size: '1gb'
     deploy:
       resources:
