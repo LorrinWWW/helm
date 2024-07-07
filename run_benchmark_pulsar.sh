@@ -2,7 +2,7 @@ export MODEL_NAME=${HELM_MODEL_NAME:-"unknown"}
 export PULSAR_VERSION=2.0
 export PULSAR_MODEL_NAME="${MODEL_NAME}_${PULSAR_VERSION}"
 
-export BOS_TOKEN="<s>"
+export BOS_TOKEN=""
 export INSTANCES=1000
 export TRIALS=3
 
